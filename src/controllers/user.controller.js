@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { userService } from '~/services/user.service.js'
 
+//role: tenant(Người tìm trọ), host(Chủ trọ), admin(Quản trị viên)
 const register = async (req, res, next) => {
   try {
     const newUser = await userService.register(req.body)
