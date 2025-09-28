@@ -3,8 +3,6 @@ import { StatusCodes } from 'http-status-codes'
 import { jwtGenerate, requestNewToken } from '~/utils/jwt'
 import UserModel from '~/models/User.model.js'
 import OTPModel from '~/models/OTP.model.js'
-import ReviewModel from '~/models/Review.model.js'
-import CheckinModel from '~/models/Checkin.model.js'
 import RefreshTokenModel from '~/models/RefreshToken.model'
 import sendMail from '~/utils/sendMail.js'
 
