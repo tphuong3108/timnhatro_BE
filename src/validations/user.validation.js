@@ -31,6 +31,11 @@ const register = async (req, res, next) => {
       'string.base': 'password must be a string',
       'string.empty': 'password cannot be empty',
       'string.min': 'password must be at least 6 characters long'
+    }),
+    otp: Joi.string().required().length(6).messages({
+      'string.base': 'otp must be a string',
+      'string.empty': 'otp cannot be empty',
+      'string.length': 'otp must be exactly 6 characters long'
     })
   })
 
@@ -218,6 +223,20 @@ const resetPassword = async (req, res, next) => {
   }
 }
 
+const updateUserLocation = async (req, res, next) => {
+  const validationRule = Joi.object({
+    longitude: Joi.number().required(),
+    latitude: Joi.number().required()
+  });
+
+  try {
+    await validationRule.validateAsync(req.body, { abortEarly: false });
+    next();
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message));
+  }
+};
+
 export const userValidation = {
   register,
   login,
@@ -226,5 +245,6 @@ export const userValidation = {
   changePassword,
   sendOTP,
   verifyOTP,
-  updateUserProfile
+  updateUserProfile,
+  updateUserLocation
 }

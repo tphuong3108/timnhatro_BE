@@ -6,14 +6,14 @@ import LoginLogModel from './LoginLog.model'
 const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: true,
+    required: function() { return this.provider === 'local'; },
     trim: true,
     minlength: 1,
     maxlength: 50
   },
   lastName: {
     type: String,
-    required: true,
+    required: function() { return this.provider === 'local'; },
     trim: true,
     minlength: 1,
     maxlength: 50
@@ -31,8 +31,9 @@ const userSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: true,
+    required: function() { return this.provider === 'local'; },
     unique: true,
+    sparse: true,
     trim: true,
     validate: {
       validator: (v) => PHONE_RULE.test(v),
@@ -45,7 +46,7 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: function() { return this.provider === 'local'; },
     minlength: 6
   },
   avatar: {
@@ -60,8 +61,8 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
+    enum: ['tenant', 'host', 'admin'],
+    default: 'tenant'
   },
   favorites: {
     type: [{
@@ -70,6 +71,10 @@ const userSchema = new mongoose.Schema({
     }],
     required: true,
     default: []
+  },
+  loginCount: {
+    type: Number,
+    default: 0
   },
   currentLocation: {
     type: {
@@ -97,6 +102,22 @@ const userSchema = new mongoose.Schema({
   _destroyed: {
     type: Boolean,
     default: false
+  },
+  facebookId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  displayName: String,
+  provider: {
+    type: String,
+    enum: ['local', 'facebook', 'google'],
+    default: 'local'
   },
   createdAt: {
     type: Date,

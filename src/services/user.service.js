@@ -20,8 +20,32 @@ const generateAndSaveOTP = async (email) => {
   return otp
 }
 
+const sendRegistrationOtp = async (reqBody) => {
+  try {
+    const { email } = reqBody
+    const existingUser = await UserModel.findOne({ email: email })
+
+    if (existingUser) {
+      throw new ApiError(StatusCodes.CONFLICT, 'Email is already exists')
+    }
+
+    const otp = await generateAndSaveOTP(email)
+    await sendMail(email, 'Your OTP Code for registration', `Your OTP code is ${otp}`)
+    return otp
+  } catch (error) {
+    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to sent send OTP email')
+  }
+}
+
 const register = async (registerData) => {
   try {
+    const { email, otp } = registerData
+    const otpRecord = await OTPModel.findOne({ email, otp })
+
+    if (!otpRecord) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid OTP')
+    }
+
     const existingUser = await UserModel.findOne({ email: registerData.email })
 
     if (existingUser) {
@@ -29,6 +53,7 @@ const register = async (registerData) => {
     }
 
     const newUser = await UserModel.create(registerData)
+    await OTPModel.deleteOne({ _id: otpRecord._id })
 
     return newUser
   } catch (error) { throw error }
@@ -65,6 +90,32 @@ const login = async (loginData) => {
     throw error
   }
 }
+
+const handleOAuthLogin = async (user, ipAddress, device) => {
+  try {
+    if (!user) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'User information is missing from OAuth provider.');
+    }
+    if (user.banned) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been banned');
+    }
+
+    const { AcessToken, RefreshToken } = jwtGenerate({ id: user._id, email: user.email, role: user.role });
+
+    await RefreshTokenModel.create({ userId: user._id, token: RefreshToken });
+    await user.saveLog(ipAddress, device);
+
+    const userData = {
+      userId: user._id,
+      role: user.role,
+      email: user.email,
+      fullName: user.firstName + ' ' + user.lastName
+    };
+    return { userData, accessToken: AcessToken, refreshToken: RefreshToken };
+  } catch (error) {
+    throw error;
+  }
+};
 
 const requestToken = async ({ refreshToken }) => {
   try {
@@ -221,6 +272,23 @@ const banUser = async (userId) => {
   }
 }
 
+const banSelf = async (userId) => {
+  try {
+    const user = await UserModel.findById(userId)
+    if (!user || user.role !== 'user') {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+    if (user.banned) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Tài khoản đã bị khóa trước đó');
+    }
+    user.banned = true
+    await user.save()
+    return { message: 'Tài khoản của bạn đã được khóa thành công'};
+  } catch (error) {
+    throw error
+  }
+}
+
 const destroyUser = async (userId) => {
   try {
     const user = await UserModel.findById(userId)
@@ -252,9 +320,28 @@ const updateUserProfile = async (userId, reqBody) => {
   }
 }
 
+const updateUserLocation = async (userId, longitude, latitude) => {
+  try {
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
+    }
+    user.currentLocation = {
+      type: 'Point',
+      coordinates: [longitude, latitude]
+    };
+    await user.save();
+    return { message: 'User location updated successfully' };
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const userService = {
+  sendRegistrationOtp,
   register,
   login,
+  handleOAuthLogin,
   resetPassword,
   requestToken,
   revokeRefreshToken,
@@ -265,6 +352,8 @@ export const userService = {
   getUserDetails,
   getUserProfile,
   banUser,
+  banSelf,
   destroyUser,
   updateUserProfile,
+  updateUserLocation,
 }

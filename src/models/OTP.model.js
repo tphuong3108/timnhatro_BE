@@ -4,10 +4,9 @@ import UserModel from './User.model'
 const otpSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: false,
+    required: true,
     trim: true,
     lowercase: true,
-    default: ''
   },
   otp: {
     type: String,
