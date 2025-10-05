@@ -46,7 +46,7 @@ const getApprovedRooms = async (queryParams) => {
     const sortOrder = queryParams.sortOrder === 'desc' ? -1 : 1
     const rooms = await RoomModel.find({ status: 'approved' })
       .populate({
-        path: 'categories',
+        path: 'amenities',
         select: 'name icon'
       })
       .populate({
@@ -90,7 +90,7 @@ const getRoomsMapdata = async (queryParams) => {
     const sortOrder = queryParams.sortOrder === 'desc' ? -1 : 1
     const rooms = await RoomModel.find({ status: 'approved' })
       .populate({
-        path: 'categories',
+        path: 'amenities',
         select: 'name icon'
       })
       .populate({
@@ -100,7 +100,7 @@ const getRoomsMapdata = async (queryParams) => {
       .sort({ [sortByMapping[sortBy]]: sortOrder })
       .skip(startIndex)
       .limit(limit)
-      .select('name slug category address location avgRating images')
+      .select('name slug amenity address location avgRating images')
     const total = await RoomModel.countDocuments({ status: 'approved' })
 
     const returnRooms = {
@@ -132,7 +132,7 @@ const getAllRooms = async (queryParams) => {
     const sortOrder = queryParams.sortOrder === 'desc' ? -1 : 1
     const rooms = await RoomModel.find()
       .populate({
-        path: 'categories',
+        path: 'amenities',
         select: 'name icon'
       })
       .populate({
@@ -162,7 +162,7 @@ const getRoomDetails = async (roomId) => {
     const query = await queryGenerate(roomId);
     const room = await RoomModel.find({ ...query, status: 'approved' })
       .populate({
-        path: 'categories',
+        path: 'amenities',
         select: 'name icon description'
       })
       .populate({
@@ -174,7 +174,7 @@ const getRoomDetails = async (roomId) => {
         select: 'name'
       })
       .select(
-        'categories status name slug description address district ward location avgRating totalRatings totalLikes likeBy images'
+        'amenities status name slug description address district ward location avgRating totalRatings totalLikes likeBy images'
       );
 
     const returnRoom = room[0] || null;
@@ -322,7 +322,7 @@ const getAdminRoomDetails = async (roomId) => {
   try {
     const room = await RoomModel.findById(roomId)
       .populate({
-        path: 'categories',
+        path: 'amenities',
         select: 'name icon description'
       })
       .populate({
@@ -381,10 +381,10 @@ const searchRooms = async (filterCriteria) => {
     if (filterCriteria.name) {
       query.name = { $regex: filterCriteria.name, $options: 'i' } // Case-insensitive search
     }
-    if (filterCriteria.category) {
-      const category = await CategoryModel.findOne({ $or: [{ slug: filterCriteria.category }, { _id: filterCriteria.category }] }).select('_id')
-      if (category) {
-        query.categories = category._id
+    if (filterCriteria.amenity) {
+      const amenity = await AmenityModel.findOne({ $or: [{ slug: filterCriteria.amenity }, { _id: filterCriteria.amenity }] }).select('_id')
+      if (amenity) {
+        query.amenities = amenity._id
       }
     }
     if (filterCriteria.address) {
@@ -404,10 +404,10 @@ const searchRooms = async (filterCriteria) => {
     }
     const rooms = await RoomModel.find({ ...query, status: 'approved' })
       .populate({
-        path: 'categories',
+        path: 'amenities',
         select: 'name icon'
       })
-      .select('name slug address avgRating totalRatings categories location images')
+      .select('name slug address avgRating totalRatings amenities location images')
       .limit(50) // Limit results for performance
     return rooms
   } catch (error) {
@@ -431,7 +431,7 @@ const getNearbyRooms = async (queryParams) => {
       status: 'approved'
     })
       .populate({
-        path: 'categories',
+        path: 'amenities',
         select: 'name icon'
       })
       .select('name slug address avgRating images location')

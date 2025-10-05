@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { amenityService } from '~/services/amenity.service.js'
 
+//Tiện ích
 const createNew = async (req, res, next) => {
   try {
     const newAmenity = await amenityService.createNew(req.body)

@@ -1,23 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { roomService } from '~/services/room.service.js'
 
-
-// const createNew = async (req, res, next) => {
-//   try {
-//     const userId = req.user.id
-//     const role = req.user.role
-//     const ownerId = (role === 'admin' || role === 'host') ? userId : null
-
-//     const newRoom = await roomService.createNew(req.body, userId, ownerId)
-
-//     res.status(StatusCodes.CREATED).json({
-//       message: 'Room created successfully',
-//       data: newRoom
-//     })
-//   } catch (error) {
-//     next(error)
-//   }
-// }
 const createNew = async (req, res, next) => {
   try {
     const userId = req.user.id
@@ -154,8 +137,10 @@ const removeFromFavorites = async (req, res, next) => {
 const updateRoomCoordinates = async (req, res, next) => {
   try {
     const roomId = req.params.id
-    const coordinates = req.body.coordinates
-    const updatedRoom = await roomService.updateRoomCoordinates(roomId, coordinates)
+    // const coordinates = req.body.coordinates
+    // const updatedRoom = await roomService.updateRoomCoordinates(roomId, coordinates)
+    const { latitude, longitude } = req.body
+    const updatedRoom = await roomService.updateRoomCoordinates(roomId, latitude, longitude)
     res.status(StatusCodes.OK).json({
       message: 'Đã cập nhật tọa độ phòng thành công',
       data: updatedRoom
