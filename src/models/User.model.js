@@ -67,7 +67,7 @@ const userSchema = new mongoose.Schema({
   favorites: {
     type: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'places'
+      ref: 'rooms'
     }],
     required: true,
     default: []
@@ -87,12 +87,8 @@ const userSchema = new mongoose.Schema({
       default: [0, 0]
     }
   },
-  points: {
-    type: Number,
-    default: 0
-  },
-  sharedBlogs: [{
-    blog: { type: mongoose.Schema.Types.ObjectId, ref: 'blogs' },
+  sharedRooms: [{
+    room: { type: mongoose.Schema.Types.ObjectId, ref: 'rooms' },
     sharedAt: { type: Date, default: Date.now }
   }],
   banned: {
