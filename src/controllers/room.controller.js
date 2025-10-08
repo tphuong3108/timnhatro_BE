@@ -211,7 +211,7 @@ const getHotRooms = async (req, res, next) => {
 }
 
 
-export const placeController = {
+export const roomController = {
   createNew,
   getAllRooms,
   getApprovedRooms,

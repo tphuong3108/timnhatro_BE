@@ -3,8 +3,6 @@ import { StatusCodes } from 'http-status-codes'
 import { mongoose } from 'mongoose'
 import RoomModel from '~/models/Room.model.js'
 import UserModel from '~/models/User.model.js'
-import CheckinModel from '~/models/Checkin.model.js'
-import ReviewModel from '~/models/Review.model.js'
 
 import { OBJECT_ID_RULE } from '~/utils/validators'
 import AmenityModel from '~/models/Amenity.model.js'
