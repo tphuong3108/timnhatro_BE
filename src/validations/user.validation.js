@@ -4,7 +4,7 @@ import ApiError from '~/utils/ApiError.js'
 import { PHONE_RULE, PHONE_RULE_MESSAGE } from '~/utils/validators'
 
 const register = async (req, res, next) => {
-  const validationRule = Joi.object({
+  const registerRule = Joi.object({
     firstName: Joi.string().min(1).max(30).required().messages({
       'string.base': 'first name must be a string',
       'string.empty': 'first name cannot be empty',
@@ -32,16 +32,20 @@ const register = async (req, res, next) => {
       'string.empty': 'password cannot be empty',
       'string.min': 'password must be at least 6 characters long'
     }),
-    otp: Joi.string().required().length(6).messages({
-      'string.base': 'otp must be a string',
-      'string.empty': 'otp cannot be empty',
-      'string.length': 'otp must be exactly 6 characters long'
+    confirmPassword: Joi.string().valid(Joi.ref('password')).required().messages({
+      'any.only': 'passwords do not match',
+      'string.empty': 'confirm password cannot be empty'
+    }),
+    avatar: Joi.string().uri().optional().messages({
+      'string.base': 'avatar must be a string',
+      'string.uri': 'avatar must be a valid URL'
     })
-  })
+  }).unknown(true)
 
   try {
     const data = req?.body ? req.body : {}
-    await validationRule.validateAsync(data, { abortEarly: false })
+    const validatedData = await registerRule.validateAsync(data, { abortEarly: false })
+    req.body = validatedData
     next()
   } catch (error) {
     next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
