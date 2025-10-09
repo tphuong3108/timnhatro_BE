@@ -27,7 +27,7 @@ const createNew = async (req, res, next) => {
     price: Joi.number().min(0).required().messages({
       'number.base': 'price must be a number',
       'number.min': 'price must be at least 0',
-      'any.required': 'price is required'
+      // 'any.required': 'price is required'
     }),
     amenities: Joi.array().items(
       Joi.string().pattern(OBJECT_ID_RULE).required().messages({
@@ -73,15 +73,15 @@ const createNew = async (req, res, next) => {
     ).optional(),
   })
   try {
-    if (req.body.location && typeof req.body.location === 'string') {
-      req.body.location = JSON.parse(req.body.location)
-    }
-    if (req.body.amenities && typeof req.body.amenities === 'string') {
-      req.body.amenities = JSON.parse(req.body.amenities)
-    }
-    if (req.body.ward && typeof req.body.ward === 'string') {
-      req.body.ward = JSON.parse(req.body.ward)[0]
-    }
+    // if (req.body.location && typeof req.body.location === 'string') {
+    //   req.body.location = JSON.parse(req.body.location)
+    // }
+    // if (req.body.amenities && typeof req.body.amenities === 'string') {
+    //   req.body.amenities = JSON.parse(req.body.amenities)
+    // }
+    // if (req.body.ward && typeof req.body.ward === 'string') {
+    //   req.body.ward = JSON.parse(req.body.ward)[0]
+    // }
     const data = req?.body ? req.body : {}
     await validationRule.validateAsync(data, { abortEarly: false })
     next()
