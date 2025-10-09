@@ -4,13 +4,13 @@ import ApiError from './ApiError'
 import { StatusCodes } from 'http-status-codes'
 
 const jwtGenerate = (payload) => {
-  const AcessToken = jwt.sign(payload, env.JWT_SECRET, {
+  const AccessToken = jwt.sign(payload, env.JWT_SECRET, {
     expiresIn: env.JWT_EXPIRES_IN || '1h'
   })
   const RefreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN || '30d'
   })
-  return { AcessToken, RefreshToken }
+  return { AccessToken, RefreshToken }
 }
 
 const requestNewToken = async (refreshToken) => {

@@ -4,36 +4,50 @@ import UserModel from '~/models/User.model.js'
 
 //role: tenant(Người tìm trọ), host(Chủ trọ), admin(Quản trị viên)
 
-const sendRegistrationOtp = async (req, res, next) => {
-  try {
-    await userService.sendRegistrationOtp(req.body)
-    res.status(StatusCodes.OK).json({ message: 'OTP sent to email for registration' })
-  } catch (error) {
-    next(error)
-  }
-}
-
 const register = async (req, res, next) => {
   try {
-    const newUser = await userService.register(req.body)
+    const result = await userService.register(req.body)
 
     res.status(StatusCodes.CREATED).json({
       success: true,
-      message: 'Đăng ký thành công',
-      user: {
-        userId: newUser._id,
-        email: newUser.email,
-        fullName: newUser.firstName + ' ' + newUser.lastName
-      }
+      message: result.message
     })
   } catch (error) {
     next(error)
   }
 }
 
+const verifyEmail = async (req, res, next) => {
+  try {
+    const result = await userService.verifyEmail(req.body);
+    res.status(StatusCodes.OK).json({ 
+      success: true, 
+      message: result.message 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const sendPasswordResetOTP = async (req, res, next) => {
+  try {
+    const result = await userService.sendPasswordResetOTP(req.body.email);
+    res.status(StatusCodes.OK).json({ 
+      success: true, 
+      message: result.message 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const login = async (req, res, next) => {
   try {
-    const { userData, accessToken, refreshToken } = await userService.login({ ...req.body, ipAddress: req.ip, device: req.headers['user-agent'] })
+    const { userData, accessToken, refreshToken } = await userService.login({
+      ...req.body,
+      ipAddress: req.ip,
+      device: req.headers['user-agent']
+    })
 
     let updatedUser = null
     if (userData && userData.userId) {
@@ -55,6 +69,7 @@ const login = async (req, res, next) => {
     next(error)
   }
 }
+
 
 const logout = async (req, res, next) => {
   try {
@@ -105,32 +120,14 @@ const changePassword = async (req, res, next) => {
   }
 }
 
-const sendOTP = async (req, res, next) => {
-  try {
-    await userService.sendOTP(req.body)
-    res.status(StatusCodes.OK).json({ message: 'OTP sent to email' })
-  } catch (error) {
-    next(error)
-  }
-}
-
-const verifyOTP = async (req, res, next) => {
-  try {
-    await userService.verifyOTP(req.body)
-    res.status(StatusCodes.OK).json({ message: 'OTP verified successfully' })
-  } catch (error) {
-    next(error)
-  }
-}
-
 const getProfile = async (req, res, next) => {
   try {
-    const userId = req?.query?.userId || req.user.id
+    const userId = req?.query?.userId || req.user.id || req.user._id || req.user.userId
     const profile = await userService.getUserProfile(userId)
     res.status(StatusCodes.OK).json({
       success: true,
       user: profile
-    })
+    });
   } catch (error) {
     next(error)
   }
@@ -161,7 +158,6 @@ const banUser = async (req, res, next) => {
     next(error)
   }
 }
-
 const banSelf = async (req, res, next) => {
   try {
     const userId = req.user.id; 
@@ -175,6 +171,7 @@ const banSelf = async (req, res, next) => {
     next(error);
   }
 };
+
 
 const destroyUser = async (req, res, next) => {
   try {
@@ -234,7 +231,6 @@ const oAuthLoginCallback = async (req, res, next) => {
 }
 
 export const userController = {
-  sendRegistrationOtp,
   register,
   login,
   logout,
@@ -243,8 +239,8 @@ export const userController = {
   getAllUsers,
   getUserDetails,
   changePassword,
-  sendOTP,
-  verifyOTP,
+  verifyEmail,
+  sendPasswordResetOTP,
   getProfile,
   banUser,
   banSelf,

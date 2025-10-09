@@ -141,11 +141,16 @@ userSchema.methods.saveLog = async function (ipAddress, device) {
 }
 
 userSchema.pre('save', async function (next) {
-  if (this.isModified('password')) {
+  if (!this.isModified('password')) {
+    return next()
+  }
+  try {
     const salt = await bcrypt.genSalt(10)
     this.password = await bcrypt.hash(this.password, salt)
+    next()
+  } catch (error) {
+    next(error)
   }
-  next()
 })
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
