@@ -172,7 +172,7 @@ const getRoomDetails = async (roomId) => {
         select: 'name'
       })
       .select(
-        'amenities status name slug description address district ward location avgRating totalRatings totalLikes likeBy images'
+        'amenities status name slug description address ward location avgRating totalRatings totalLikes likeBy images'
       );
 
     const returnRoom = room[0] || null;
@@ -181,7 +181,7 @@ const getRoomDetails = async (roomId) => {
     }
 
     // Lấy danh sách đánh giá của địa điểm
-    const reviews = await ReviewModel.find({ roomId: returnRoom._id, _hidden: false })
+    const reviews = await RoomModel.find({ roomId: returnRoom._id, _hidden: false })
       .populate('userId', 'name avatar') // Lấy thông tin người dùng
       .select('comment rating createdAt') // Chọn các trường cần thiết
       .sort({ createdAt: -1 });
@@ -225,14 +225,18 @@ const likeRoom = async (roomId, userId) => {
     if (!room || room.status !== 'approved') {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Room not found')
     }
-    if (room.likeBy.includes(new mongoose.Types.ObjectId(userId))) {
-      room.likeBy.pull(new mongoose.Types.ObjectId(userId))
+    const userObjectId = new mongoose.Types.ObjectId(userId)
+    let isLiked
+    if (room.likeBy.includes(userObjectId)) {
+      room.likeBy.pull(userObjectId)
+      isLiked = false   // => Bỏ thích
     } else {
-      room.likeBy.push(new mongoose.Types.ObjectId(userId))
+      room.likeBy.push(userObjectId)
+      isLiked = true    // => Đã thích
     }
     await room.save()
     await room.updateTotalLikes()
-    return room
+    return { room, isLiked }
   } catch (error) {
     throw error
   }
@@ -355,24 +359,6 @@ const getUserSuggestedRooms = async (userId) => {
   }
 }
 
-const getUserCheckins = async (userId) => {
-  try {
-    const checkins = await CheckinModel.find({ userId })
-      .populate({
-        path: 'roomId',
-        select: 'name address ward district avgRating totalRatings images',
-        populate: {
-          path: 'ward',
-          select: 'name'
-        }
-      });
-    return checkins;
-  } catch (error) {
-    throw error;
-  }
-};
-
-
 const searchRooms = async (filterCriteria) => {
   try {
     const query = {}
@@ -443,38 +429,36 @@ const getNearbyRooms = async (queryParams) => {
 const getHotRooms = async () => {
   try {
     const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startOfWeek = new Date(now)
+    const day = now.getDay() // 0 = Chủ nhật
+    startOfWeek.setDate(now.getDate() - day)
+    startOfWeek.setHours(0, 0, 0, 0)
 
-    const hotRooms = await CheckinModel.aggregate([
+    const hotRooms = await RoomModel.aggregate([
       {
         $match: {
-          createdAt: { $gte: startOfMonth, $lte: now }
+          createdAt: { $gte: startOfWeek, $lte: now }
         }
       },
       {
-        $group: {
-          _id: '$roomId',
-          totalCheckins: { $sum: 1 }
+        $addFields: {
+          favoriteCount: { $size: { $ifNull: ['$favorites', []] } }
         }
       },
-      { $sort: { totalCheckins: -1 } },
       {
-        $lookup: {
-          from: 'rooms', // tên collection
-          localField: '_id',
-          foreignField: '_id',
-          as: 'room'
-        }
-      },
-      { $unwind: '$room' },
+        // Sắp xếp theo: rating cao → favorite nhiều → like nhiều
+        $sort: { avgRating: -1, favoriteCount: -1, totalLikes: -1 }
+      },      
       {
         $project: {
           _id: 0,
           roomId: '$_id',
-          totalCheckins: 1,
-          name: '$room.name',
-          address: '$room.address',
-          image: { $arrayElemAt: ['$room.images', 0] }
+          name: '$name',
+          address: '$address',
+          image: { $arrayElemAt: ['$images', 0] },
+          avgRating: 1,
+          favoriteCount: 1,
+          totalLikes: 1
         }
       }
     ])

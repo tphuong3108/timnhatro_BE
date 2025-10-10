@@ -94,10 +94,12 @@ const likeRoom = async (req, res, next) => {
   try {
     const roomId = req.params.id
     const userId = req.user.id
-    await roomService.likeRoom(roomId, userId)
+    const { isLiked } = await roomService.likeRoom(roomId, userId)
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'Đã thích phòng thành công'
+      message: isLiked
+        ? 'Đã thích phòng thành công'
+        : 'Đã bỏ thích phòng thành công'
     })
   } catch (error) {
     next(error)
