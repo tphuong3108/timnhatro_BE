@@ -348,6 +348,20 @@ const getAdminRoomDetails = async (roomId) => {
   }
 }
 
+const addViewCount = async (roomId, userId) => {
+  try {
+    const room = await RoomModel.findById(roomId)
+    if (!room || room.status !== 'approved') {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Room not found')
+    }
+    room.viewCount += 1
+    await room.save()
+    return room
+  } catch (error) {
+    throw error
+  }
+}
+
 const getUserSuggestedRooms = async (userId) => {
   try {
     const suggestedRooms = await RoomModel.find({
@@ -475,6 +489,7 @@ export const roomService = {
   getApprovedRooms,
   searchRooms,
   getRoomsMapdata,
+  addViewCount,
   getUserSuggestedRooms,
   getAdminRoomDetails,
   getRoomDetails,
