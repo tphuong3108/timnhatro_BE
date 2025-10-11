@@ -89,6 +89,10 @@ const roomSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  viewCount: {
+    type: Number,
+    default: 0
+  },
   likeBy: {
     type: [{
       type: mongoose.Schema.Types.ObjectId,

@@ -34,4 +34,6 @@ Router.patch('/:id', verifyToken, verifyRoles('tenant', 'host'), generalValidati
 Router.post('/:id/favorite', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.addToFavorites)
 Router.delete('/:id/favorite', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.removeFromFavorites)
 
+// Tăng view phòng
+Router.post('/:id/view', roomController.addViewCount)
 export const roomRoute = Router

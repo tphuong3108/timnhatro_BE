@@ -90,6 +90,20 @@ const destroyRoom = async (req, res, next) => {
   }
 }
 
+const addViewCount = async (req, res, next) => {
+  try {
+    const placeId = req.params.id
+    const place = await placeService.addViewCount(placeId)
+    res.status(StatusCodes.OK).json({
+      'success': true,
+      message: 'Đã tăng view count thành công',
+      place
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const likeRoom = async (req, res, next) => {
   try {
     const roomId = req.params.id
@@ -221,6 +235,7 @@ export const roomController = {
   getRoomDetails,
   updateRoom,
   destroyRoom,
+  addViewCount,
   likeRoom,
   addToFavorites,
   removeFromFavorites,
