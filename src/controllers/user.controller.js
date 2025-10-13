@@ -99,7 +99,11 @@ const requestToken = async (req, res, next) => {
 
 const getAllUsers = async (req, res, next) => {
   try {
-    const users = await userService.getAllUsers()
+    // Lấy role từ query: ?role=host hoặc ?role=host,tenant
+    const { role } = req.query
+    const roles = role ? role.split(',') : []
+
+    const users = await userService.getAllUsers(roles)
     res.status(StatusCodes.OK).json(users)
   } catch (error) {
     next(error)

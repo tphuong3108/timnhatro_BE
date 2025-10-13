@@ -200,9 +200,14 @@ const revokeRefreshToken = async (userId) => {
   }
 }
 
-const getAllUsers = async () => {
+const getAllUsers = async (roles = []) => {
   try {
-    const users = await UserModel.find({ role: 'user' }).select('-password')
+    // Nếu truyền roles thì lọc theo roles, không thì lấy host + tenant mặc định
+    const filter = roles.length
+      ? { role: { $in: roles } }
+      : { role: { $in: ['host', 'tenant'] } }
+
+    const users = await UserModel.find(filter).select('-password')
     return users
   } catch (error) {
     throw error
@@ -255,7 +260,7 @@ const resetPassword = async (reqBody) => {
 const getUserProfile = async (userId) => {
   try {
     const user = await UserModel.findById(userId).select('-password')
-    if (!user || user.role !== 'user' || user._destroyed) {
+    if (!user || !['host', 'tenant'].includes(user.role) || user._destroyed) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
     if (user.banned) {
@@ -266,8 +271,8 @@ const getUserProfile = async (userId) => {
       userId: user._id,
       email: user.email,
       fullName: `${user.firstName} ${user.lastName}`,
+      role: user.role,
       avatar: user.avatar || null,
-      cover: user.cover || null,
       bio: user.bio || '',
       favorites: user.favorites || [],
       sharedRooms: user.sharedRooms || [],  
@@ -284,7 +289,7 @@ const getUserDetails = async (userId) => {
       .populate('favorites', 'name address avgRating totalRatings')
       .populate('sharedRooms', 'title content');
 
-    if (!user || user.role !== 'user' || user._destroyed) {
+    if (!user || !['host', 'tenant'].includes(user.role) ||  user._destroyed) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
     }
     if (user.banned) {
@@ -294,8 +299,8 @@ const getUserDetails = async (userId) => {
     return {
       userId: user._id,
       fullName: `${user.firstName} ${user.lastName}`,
+      role: user.role,
       avatar: user.avatar || null,
-      cover: user.cover || null,
 
       email: user.email,
 
@@ -311,7 +316,7 @@ const getUserDetails = async (userId) => {
 const banUser = async (userId) => {
   try {
     const user = await UserModel.findById(userId)
-    if (!user || user.role !== 'user') {
+    if (!user || !['host', 'tenant'].includes(user.role)) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
     if (user.banned) {
@@ -326,7 +331,7 @@ const banUser = async (userId) => {
 const banSelf = async (userId) => {
   try {
     const user = await UserModel.findById(userId)
-    if (!user || user.role !== 'user') {
+    if (!user || !['host', 'tenant'].includes(user.role)) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
     if (user.banned) {
@@ -343,7 +348,7 @@ const banSelf = async (userId) => {
 const destroyUser = async (userId) => {
   try {
     const user = await UserModel.findById(userId)
-    if (!user || user.role !== 'user') {
+    if (!user || !['host', 'tenant'].includes(user.role)) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
     user._destroyed = true

@@ -92,12 +92,12 @@ const destroyRoom = async (req, res, next) => {
 
 const addViewCount = async (req, res, next) => {
   try {
-    const placeId = req.params.id
-    const place = await placeService.addViewCount(placeId)
+    const roomId = req.params.id
+    const room = await roomService.addViewCount(roomId)
     res.status(StatusCodes.OK).json({
       'success': true,
       message: 'Đã tăng view count thành công',
-      place
+      room
     })
   } catch (error) {
     next(error)

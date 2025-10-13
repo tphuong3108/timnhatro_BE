@@ -27,7 +27,21 @@ const updateProfile = async (req, res, next) => {
   }
 }
 
+const getUserReviews = async (req, res, next) => {
+  try {
+    const userId = req.user.id
+    const reviews = await userService.getUserReviews(userId)
+    res.status(StatusCodes.OK).json({
+      'success': true,
+      'data': reviews
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const profileController = {
   getProfile,
-  updateProfile
+  updateProfile,
+  getUserReviews
 }

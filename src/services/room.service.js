@@ -157,43 +157,38 @@ const getAllRooms = async (queryParams) => {
 
 const getRoomDetails = async (roomId) => {
   try {
-    const query = await queryGenerate(roomId);
-    const room = await RoomModel.find({ ...query, status: 'approved' })
-      .populate({
-        path: 'amenities',
-        select: 'name icon description'
-      })
-      .populate({
-        path: 'likeBy',
-        select: 'firstName lastName avatar'
-      })
-      .populate({
-        path: 'ward',
-        select: 'name'
-      })
+    const query = await queryGenerate(roomId)
+
+    const room = await RoomModel.findOneAndUpdate(
+      { ...query, status: 'approved' },
+      { $inc: { viewCount: 1 } },
+      { new: true }
+    )
+      .populate({ path: 'amenities', select: 'name description' })
+      .populate({ path: 'likeBy', select: 'firstName lastName avatar' })
+      .populate({ path: 'ward', select: 'name' })
       .select(
-        'amenities status name slug description address ward location avgRating totalRatings totalLikes likeBy images'
+        'amenities status name slug description price address ward location avgRating totalRatings totalLikes likeBy images viewCount'
       );
 
-    const returnRoom = room[0] || null;
-    if (!returnRoom || returnRoom.status !== 'approved') {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Room not found');
+    if (!room || room.status !== 'approved') {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Room not found')
     }
 
-    // Lấy danh sách đánh giá của địa điểm
-    const reviews = await RoomModel.find({ roomId: returnRoom._id, _hidden: false })
-      .populate('userId', 'name avatar') // Lấy thông tin người dùng
-      .select('comment rating createdAt') // Chọn các trường cần thiết
-      .sort({ createdAt: -1 });
+    // Lấy danh sách đánh giá
+    const reviews = await ReviewModel.find({ roomId: room._id, _hidden: false })
+      .populate('userId', 'name avatar')
+      .select('comment rating createdAt')
+      .sort({ createdAt: -1 })
 
     return {
-      ...returnRoom.toObject(),
-      reviews // Thêm danh sách đánh giá vào kết quả trả về
-    };
+      ...room.toObject(),
+      reviews
+    }
   } catch (error) {
-    throw error;
+    throw error
   }
-};
+}
 
 const updateRoom = async (roomId, updateData) => {
   try {
