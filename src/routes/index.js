@@ -3,7 +3,7 @@ import { userRoute } from './user.routes.js'
 import { profileRoute } from './profile.routes.js'
 import { roomRoute } from './room.routes.js'
 import { adminRoute } from './admin.routes.js'
-// import { hostRouter } from './host.routes.js'
+import { hostRouter } from './host.routes.js'
 import { wardRoute } from './ward.routes.js'
 import { amenityRoute } from './amenity.routes.js'
 import { reviewRouter } from './review.routes.js'
@@ -15,7 +15,7 @@ Router.get('/status', (req, res) => {
 })
 
 Router.use('/admin', adminRoute)
-// Router.use('/hosts', hostRouter)
+Router.use('/hosts', hostRouter)
 Router.use('/users', userRoute)
 Router.use('/me', profileRoute)
 

@@ -29,7 +29,7 @@ Router.get('/stats/logins', adminController.getLoginStats)
 Router.get('/stats/monthlyUsers', verifyToken, verifyAdmin, adminController.getUserMonthlyStats)
 Router.get('/stats/topHosts', verifyToken, verifyAdmin, adminController.getTopHosts)
 
-Router.post('/rooms', verifyToken, roomValidation.createNew, roomController.createNew)
+Router.post('/rooms', verifyToken, verifyAdmin, roomValidation.createNew, roomController.createNew)
 Router.get('/rooms', verifyToken, verifyAdmin, roomValidation.pagingValidate, roomController.getAllRooms)
 Router.get('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.getAdminRoomDetails)
 Router.patch('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.updateRoom)

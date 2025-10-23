@@ -10,7 +10,7 @@ import { roomController } from '~/controllers/room.controller.js'
 
 const Router = express.Router()
 
-Router.post('/rooms', verifyToken, roomValidation.createNew, roomController.createNew)
+Router.post('/rooms', verifyToken, verifyHost, roomValidation.createNew, roomController.createNew)
 Router.get('/rooms', verifyToken, verifyHost, roomValidation.pagingValidate, roomController.getAllRooms)
 Router.get('/rooms/:id', verifyToken, verifyHost, generalValidation.paramIdValidate, roomController.getAdminRoomDetails)
 Router.patch('/rooms/:id', verifyToken, verifyHost, generalValidation.paramIdValidate, roomController.updateRoom)
@@ -23,5 +23,4 @@ Router.get('/stats/daily', verifyToken, verifyHost, hostController.getDailyStats
 Router.get('/stats/topViewedRooms', verifyToken, verifyHost, hostController.getTopViewedRooms)
 Router.get('/reviews', verifyToken, verifyHost, hostValidation.getMyReviews, hostController.getMyReviews)
 
-
-export const hostRoute = Router
+export const hostRouter = Router
