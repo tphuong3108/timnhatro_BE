@@ -11,8 +11,6 @@ import { userController } from '~/controllers/user.controller.js'
 import { roomValidation } from '~/validations/room.validation.js'
 import { roomController } from '~/controllers/room.controller.js'
 
-import { amenityRoute } from './amenity.routes.js'
-
 const Router = express.Router()
 
 Router.get('/me', verifyToken, verifyAdmin, adminController.getMe);
@@ -38,8 +36,6 @@ Router.patch('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdVa
 Router.put('/rooms/:id/approve', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.approveRoom)
 Router.put('/rooms/:id/coordinates', verifyToken, verifyAdmin, roomValidation.updateRoomCoordinates, roomController.updateRoomCoordinates)
 Router.delete('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.destroyRoom)
-
-Router.use('/amenities', amenityRoute)
 
 Router.get('/reviews', verifyToken, verifyAdmin, adminValidation.getFilteredReviews, adminController.getFilteredReviews)
 Router.delete('/reviews/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, adminController.deleteReview)

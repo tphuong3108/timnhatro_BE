@@ -155,6 +155,35 @@ const getAllRooms = async (queryParams) => {
   }
 }
 
+const getHostRooms = async (hostId, queryParams) => {
+  try {
+    const page = parseInt(queryParams.page, 10) || 1
+    const limit = parseInt(queryParams.limit, 10) || 10
+    const startIndex = (page - 1) * limit
+
+    const rooms = await RoomModel.find({ createdBy: hostId })
+      .populate({ path: 'amenities', select: 'name icon' })
+      .sort({ createdAt: -1 })
+      .skip(startIndex)
+      .limit(limit)
+      .select('name status slug address price avgRating images createdAt')
+
+    const total = await RoomModel.countDocuments({ createdBy: hostId })
+
+    return {
+      rooms,
+      pagination: {
+        total,
+        limit,
+        page,
+        totalPages: Math.ceil(total / limit)
+      }
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
 const getRoomDetails = async (roomId) => {
   try {
     const query = await queryGenerate(roomId)
@@ -190,18 +219,22 @@ const getRoomDetails = async (roomId) => {
   }
 }
 
-const updateRoom = async (roomId, updateData) => {
+const updateRoom = async (roomId, updateData, userId, role) => {
   try {
-    const updatedRoom = await RoomModel.findByIdAndUpdate(roomId, {
-      ...updateData,
-      updatedAt: new Date()
-    }, { new: true })
-    if (!updatedRoom) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Room not found')
+    const room = await RoomModel.findById(roomId)
+    if (!room) throw new ApiError(StatusCodes.NOT_FOUND, 'Room not found')
+
+    // Nếu là host và phòng đã được duyệt → chuyển về pending để admin kiểm duyệt lại
+    if (role === 'host' && room.status === 'approved') {
+      room.status = 'pending'
+      room.verifiedBy = null
     }
-    return updatedRoom
-  }
-  catch (error) {
+
+    Object.assign(room, updateData)
+    room.updatedAt = new Date()
+    await room.save()
+    return room
+  } catch (error) {
     throw error
   }
 }
@@ -481,6 +514,7 @@ const getHotRooms = async () => {
 export const roomService = {
   createNew,
   getAllRooms,
+  getHostRooms,
   getApprovedRooms,
   searchRooms,
   getRoomsMapdata,

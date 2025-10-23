@@ -1,9 +1,8 @@
 import express from 'express'
 import { reviewController } from '../controllers/review.controller.js'
 import { reviewValidation } from '../validations/review.validation.js'
-import { verifyToken,  verifyRoles} from '../middlewares/auth.middleware.js'
-
-import { reviewRateLimiter } from '~/middlewares/limiter.middleware.js'
+import { verifyToken,  verifyRoles, verifyTenant} from '../middlewares/auth.middleware.js'
+import { reviewRateLimiter } from '../middlewares/limiter.middleware.js'
 
 const router = express.Router()
 

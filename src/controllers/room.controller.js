@@ -31,6 +31,20 @@ const getAllRooms = async (req, res, next) => {
   }
 }
 
+const getHostRooms = async (req, res, next) => {
+  try {
+    const hostId = req.user.id
+    const rooms = await roomService.getHostRooms(hostId, req.query)
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Danh sách phòng của host đã được lấy thành công',
+      data: rooms
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const getApprovedRooms = async (req, res, next) => {
   try {
     const approvedRooms = await roomService.getApprovedRooms(req.query)
@@ -68,7 +82,9 @@ const getRoomDetails = async (req, res, next) => {
 const updateRoom = async (req, res, next) => {
   try {
     const roomId = req.params.id
-    const updatedRoom = await roomService.updateRoom(roomId, req.body)
+    const userId = req.user.id
+    const role = req.user.role
+    const updatedRoom = await roomService.updateRoom(roomId, req.body, userId, role)
     res.status(StatusCodes.OK).json({
       message: 'Đã cập nhật phòng thành công',
       data: updatedRoom
@@ -230,6 +246,7 @@ const getHotRooms = async (req, res, next) => {
 export const roomController = {
   createNew,
   getAllRooms,
+  getHostRooms,
   getApprovedRooms,
   searchRooms,
   getRoomDetails,

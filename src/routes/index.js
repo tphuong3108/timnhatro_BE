@@ -5,8 +5,8 @@ import { roomRoute } from './room.routes.js'
 import { adminRoute } from './admin.routes.js'
 // import { hostRouter } from './host.routes.js'
 import { wardRoute } from './ward.routes.js'
+import { amenityRoute } from './amenity.routes.js'
 import { reviewRouter } from './review.routes.js'
-
 
 const Router = express.Router()
 
@@ -22,5 +22,6 @@ Router.use('/me', profileRoute)
 Router.use('/rooms', roomRoute)
 Router.use('/wards', wardRoute)
 Router.use('/reviews', reviewRouter)
+Router.use('/amenities', amenityRoute)
 
 export const APIs = Router

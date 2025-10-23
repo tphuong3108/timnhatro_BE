@@ -90,6 +90,73 @@ const createNew = async (req, res, next) => {
   }
 }
 
+const updateRoomValidate = async (req, res, next) => {
+  const validationRule = Joi.object({
+    name: Joi.string().min(3).max(100).messages({
+      'string.base': 'name must be a string',
+      'string.empty': 'name cannot be empty',
+      'string.min': 'name must be at least 3 characters long',
+      'string.max': 'name must be at most 100 characters long'
+    }).optional(),
+
+    price: Joi.number().min(0).messages({
+      'number.base': 'price must be a number',
+      'number.min': 'price must be at least 0'
+    }).optional(),
+
+    amenities: Joi.array().items(
+      Joi.string().pattern(OBJECT_ID_RULE).messages({
+        'string.pattern.base': OBJECT_ID_RULE_MESSAGE
+      })
+    ).messages({
+      'array.base': 'amenities must be an array of ObjectId strings'
+    }).optional(),
+
+    address: Joi.string().min(5).max(200).messages({
+      'string.base': 'address must be a string',
+      'string.min': 'address must be at least 5 characters long',
+      'string.max': 'address must be at most 200 characters long'
+    }).optional(),
+
+    ward: Joi.string().pattern(OBJECT_ID_RULE).messages({
+      'string.pattern.base': OBJECT_ID_RULE_MESSAGE
+    }).optional(),
+
+    location: Joi.object({
+      type: Joi.string().valid('Point').default('Point'),
+      coordinates: Joi.array().ordered(
+        Joi.number().min(-180).max(180).required(), // longitude
+        Joi.number().min(-90).max(90).required()   // latitude
+      ).length(2).required()
+    }).optional(),
+
+    images: Joi.array().items(
+      Joi.string().uri().messages({
+        'string.uri': 'each image must be a valid URL'
+      })
+    ).min(1).messages({
+      'array.base': 'images must be an array of strings'
+    }).optional(),
+
+    videos: Joi.array().items(
+      Joi.string().messages({
+        'string.base': 'each video must be a string'
+      })
+    ).optional()
+  })
+  try {
+    const roomIdData = req?.params || {}
+    const data = req?.body ? req.body : {}
+
+    await idRule.validateAsync(roomIdData, { abortEarly: false })
+    await validationRule.validateAsync(data, { abortEarly: false })
+
+    next()
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
+  }
+}
+
 const pagingValidate = async (req, res, next) => {
   const pagingRule = Joi.object({
     page: Joi.number().integer().min(1).default(1),
@@ -179,6 +246,7 @@ const nearbyRooms = async (req, res, next) => {
 
 export const roomValidation = {
   createNew,
+  updateRoomValidate,
   pagingValidate,
   updateRoomCoordinates,
   searchValidate,

@@ -7,10 +7,10 @@ const createReview = async (roomId, reviewData, userId) => {
   try {
     const room = await RoomModel.findById(roomId)
     if (!room) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy địa điểm.')
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy phòng.')
     }
     if (room.status !== 'approved') {
-      throw new ApiError(StatusCodes.FORBIDDEN, 'không có địa điểm này!')
+      throw new ApiError(StatusCodes.FORBIDDEN, 'không có phòng này!')
     }
 
     const existingReview = await ReviewModel.findOne({
@@ -19,7 +19,7 @@ const createReview = async (roomId, reviewData, userId) => {
     })
 
     if (existingReview) {
-      throw new ApiError(StatusCodes.CONFLICT, 'Bạn đã đánh giá địa điểm này rồi.')
+      throw new ApiError(StatusCodes.CONFLICT, 'Bạn đã đánh giá phòng này rồi.')
     }
 
     const newReview = await ReviewModel.create({
@@ -40,7 +40,7 @@ const getReviewsByRoomId = async (queryParams) => {
   try {
     const room = await RoomModel.findById(queryParams.roomId)
     if (!room || room.status !== 'approved') {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy địa điểm.')
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy phòng.')
     }
     const page = parseInt(queryParams.page, 10) || 1
     const limit = parseInt(queryParams.limit, 10) || 10

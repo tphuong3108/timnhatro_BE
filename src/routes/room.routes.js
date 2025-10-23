@@ -12,9 +12,6 @@ Router.get('/search', roomValidation.searchValidate, roomController.searchRooms)
 // Lấy phòng gần đây
 Router.get('/nearby', roomValidation.nearbyRooms, roomController.getNearbyRooms)
 
-// Đề xuất / tạo phòng mới
-Router.post('/suggest', verifyToken, verifyRoles('host','admin'), roomValidation.createNew, roomController.createNew)
-
 // Lấy danh sách phòng
 Router.get('/', roomValidation.pagingValidate, roomController.getAllRooms)
 
