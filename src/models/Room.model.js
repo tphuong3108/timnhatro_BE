@@ -105,6 +105,33 @@ const roomSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'hidden'],
     default: 'pending'
   },
+  availability: {
+    type: String,
+    enum: ['available', 'unavailable'],
+    default: 'available'
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  reports: [
+    {
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users',
+        required: true,
+      },
+      reason: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      reportedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'users',

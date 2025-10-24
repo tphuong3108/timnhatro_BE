@@ -239,6 +239,20 @@ const updateRoom = async (roomId, updateData, userId, role) => {
   }
 }
 
+const updateAvailability = async (roomId, availability, userId, role) => {
+  const room = await RoomModel.findById(roomId)
+  if (!room) throw new ApiError(StatusCodes.NOT_FOUND, 'Room not found')
+
+  if (role === 'host' && room.createdBy.toString() !== userId.toString()) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'You are not allowed to update this room')
+  }
+
+  room.availability = availability
+  await room.save()
+
+  return room
+}
+
 const destroyRoom = async (roomId) => {
   try {
     return await updateRoom(roomId, { status: 'hidden' })
@@ -523,6 +537,7 @@ export const roomService = {
   getAdminRoomDetails,
   getRoomDetails,
   updateRoom,
+  updateAvailability,
   destroyRoom,
   likeRoom,
   addToFavorites,

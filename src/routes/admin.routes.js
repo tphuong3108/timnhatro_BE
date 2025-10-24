@@ -25,7 +25,7 @@ Router.get('/stats/overview', verifyToken, verifyAdmin, adminController.getOverv
 Router.get('/stats/daily', verifyToken, verifyAdmin, adminController.getDailyStats)
 Router.get('/stats/popular', verifyToken, verifyAdmin, adminController.getPopularStats)
 Router.get('/stats/topViewedRooms', verifyToken, verifyAdmin, adminController.getTopViewedRooms)
-Router.get('/stats/logins', adminController.getLoginStats)
+Router.get('/stats/logins', verifyToken, verifyAdmin, adminController.getLoginStats)
 Router.get('/stats/monthlyUsers', verifyToken, verifyAdmin, adminController.getUserMonthlyStats)
 Router.get('/stats/topHosts', verifyToken, verifyAdmin, adminController.getTopHosts)
 

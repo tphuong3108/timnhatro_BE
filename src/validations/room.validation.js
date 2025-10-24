@@ -157,6 +157,20 @@ const updateRoomValidate = async (req, res, next) => {
   }
 }
 
+const updateAvailability = async (req, res, next) => {
+  const schema = Joi.object({
+    availability: Joi.string().valid('available', 'unavailable').required()
+  })
+
+  try {
+    await schema.validateAsync(req.body, { abortEarly: false })
+    next()
+  } catch (error) {
+    const messages = error.details.map(err => err.message).join(', ')
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, messages))
+  }
+}
+
 const pagingValidate = async (req, res, next) => {
   const pagingRule = Joi.object({
     page: Joi.number().integer().min(1).default(1),
@@ -247,6 +261,7 @@ const nearbyRooms = async (req, res, next) => {
 export const roomValidation = {
   createNew,
   updateRoomValidate,
+  updateAvailability,
   pagingValidate,
   updateRoomCoordinates,
   searchValidate,

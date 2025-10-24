@@ -94,6 +94,23 @@ const updateRoom = async (req, res, next) => {
   }
 }
 
+const updateAvailability = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const { availability } = req.body
+    const userId = req.user?.id
+    const role = req.user?.role
+
+    const room = await roomService.updateAvailability(id, availability, userId, role)
+    res.status(StatusCodes.OK).json({
+      message: 'Room availability updated successfully',
+      room
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const destroyRoom = async (req, res, next) => {
   try {
     const roomId = req.params.id
@@ -251,6 +268,7 @@ export const roomController = {
   searchRooms,
   getRoomDetails,
   updateRoom,
+  updateAvailability,
   destroyRoom,
   addViewCount,
   likeRoom,

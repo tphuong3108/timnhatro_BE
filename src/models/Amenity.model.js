@@ -15,6 +15,15 @@ const amenitySchema = new mongoose.Schema({
     maxlength: 500,
     default: ''
   },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'hidden'],
+    default: 'pending'
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

@@ -4,7 +4,7 @@ import { profileController } from '~/controllers/profile.controller.js'
 const Router = express.Router()
 
 Router.get('/', verifyToken, profileController.getProfile)
-Router.put('/', verifyToken, profileController.updateProfile)
+Router.patch('/', verifyToken, profileController.updateProfile)
 
 Router.get('/reviews', verifyToken, profileController.getUserReviews)
 

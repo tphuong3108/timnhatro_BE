@@ -28,8 +28,6 @@ const createReview = async (roomId, reviewData, userId) => {
       userId: userId
     })
     await newReview.updateRoomAvgRating()
-    // Trigger badge action
-    badgeActionService.handleUserAction(userId, 'create_review', { reviewId: newReview._id, roomId })
     return newReview
   } catch (error) {
     throw error
@@ -48,7 +46,7 @@ const getReviewsByRoomId = async (queryParams) => {
 
     const query = { roomId: queryParams.roomId }
 
-    const reviews = await ReviewModel.find({ ...query, _hidden: false })
+    const reviews = await ReviewModel.find({ ...query, _hidden: false, isDeleted: false })
       .populate('userId', 'name avatar') // Lấy thông tin người dùng
       .sort({ createdAt: -1 })
       .skip(startIndex)
@@ -86,7 +84,8 @@ const deleteReview = async (reviewId, user) => {
       throw new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền xoá đánh giá này.')
     }
 
-    await review.deleteOne()
+    review.isDeleted = true
+    await review.save()
     await review.updateRoomAvgRating()
     return { success: true, message: 'Đánh giá đã được xoá thành công.' }
   } catch (error) {
@@ -131,8 +130,6 @@ const likeReview = async (reviewId, userId) => {
     review.likeBy = review.likeBy.filter(id => id.toString() !== userId.toString())
   } else {
     review.likeBy.push(userId)
-    // Trigger badge action
-    badgeActionService.handleUserAction(userId, 'like_review', { reviewId })
   }
 
   review.totalLikes = review.likeBy.length
