@@ -23,6 +23,7 @@ Router.get('/hot', roomController.getHotRooms)
 
 // Chi tiết phòng
 Router.get('/:id', generalValidation.paramSlugValidate, roomController.getRoomDetails)
+Router.get('/slug/:id', generalValidation.paramSlugValidate, roomController.getRoomDetailsBySlug)
 
 // Like phòng
 Router.patch('/:id', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.likeRoom)
@@ -33,4 +34,6 @@ Router.delete('/:id/favorite', verifyToken, verifyRoles('tenant', 'host'), gener
 
 // Tăng view phòng
 Router.post('/:id/view', roomController.addViewCount)
+// Báo cáo phòng
+Router.post('/:id/report', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomValidation.reportRoom, roomController.reportRoom)
 export const roomRoute = Router

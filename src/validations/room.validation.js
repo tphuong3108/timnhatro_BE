@@ -258,6 +258,26 @@ const nearbyRooms = async (req, res, next) => {
   }
 }
 
+const reportRoom = async (req, res, next) => {
+  const reportRoomRule = Joi.object({
+    reason: Joi.string().required().min(10).trim().messages({
+      'string.empty': 'Lý do báo cáo không được để trống.',
+      'string.min': 'Lý do báo cáo phải có ít nhất 10 ký tự.',
+      'any.required': 'Lý do báo cáo là trường bắt buộc.',
+    }),
+  })
+
+  try {
+    const roomIdData = req?.params || {}
+    const data = req?.body || {}
+    await idRule.validateAsync(roomIdData, { abortEarly: false })
+    await reportRoomRule.validateAsync(data, { abortEarly: false })
+    next()
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
+  }
+}
+
 export const roomValidation = {
   createNew,
   updateRoomValidate,
@@ -265,5 +285,6 @@ export const roomValidation = {
   pagingValidate,
   updateRoomCoordinates,
   searchValidate,
-  nearbyRooms
+  nearbyRooms,
+  reportRoom
 }

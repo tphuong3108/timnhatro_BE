@@ -79,6 +79,20 @@ const getRoomDetails = async (req, res, next) => {
   }
 }
 
+const getRoomDetailsBySlug = async (req, res, next) => {
+  try {
+    const { slug } = req.params
+    const roomDetails = await roomService.getRoomDetailsBySlug(slug)
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: roomDetails
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const updateRoom = async (req, res, next) => {
   try {
     const roomId = req.params.id
@@ -259,6 +273,18 @@ const getHotRooms = async (req, res, next) => {
   }
 }
 
+const reportRoom = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const userId = req.user.id
+    const { reason } = req.body
+
+    const result = await roomService.reportRoom(id, userId, reason)
+    res.status(StatusCodes.OK).json({ success: true, message: result.message })
+  } catch (error) {
+    next(error)
+  }
+}
 
 export const roomController = {
   createNew,
@@ -267,6 +293,7 @@ export const roomController = {
   getApprovedRooms,
   searchRooms,
   getRoomDetails,
+  getRoomDetailsBySlug,
   updateRoom,
   updateAvailability,
   destroyRoom,
@@ -279,5 +306,6 @@ export const roomController = {
   getAdminRoomDetails,
   getRoomsMapdata,
   getNearbyRooms,
-  getHotRooms
+  getHotRooms,
+  reportRoom
 }

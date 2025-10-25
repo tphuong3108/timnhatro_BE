@@ -152,16 +152,20 @@ const getUserDetails = async (req, res, next) => {
 
 const banUser = async (req, res, next) => {
   try {
-    const userId = req.params.id
-    await userService.banUser(userId)
+    const userId = req.params.id;
+    const currentUser = req.user;
+
+    const result = await userService.banUser(userId, currentUser);
+
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'User has been banned successfully'
-    })
+      message: result.message
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
 }
+
 const banSelf = async (req, res, next) => {
   try {
     const userId = req.user.id; 
@@ -176,17 +180,19 @@ const banSelf = async (req, res, next) => {
   }
 };
 
-
 const destroyUser = async (req, res, next) => {
   try {
-    const userId = req.params.id
-    await userService.destroyUser(userId)
+    const userId = req.params.id;
+    const currentUser = req.user;
+
+    const result = await userService.destroyUser(userId, currentUser);
+
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'User has been deleted successfully'
-    })
+      message: result.message
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
 }
 

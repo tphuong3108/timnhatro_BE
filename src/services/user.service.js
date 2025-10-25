@@ -313,17 +313,25 @@ const getUserDetails = async (userId) => {
   }
 }
 
-const banUser = async (userId) => {
+const banUser = async (userId, currentUser) => {
   try {
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền thực hiện hành động này');
+    }
     const user = await UserModel.findById(userId)
     if (!user || !['host', 'tenant'].includes(user.role)) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+    // Không cho phép admin tự khoá admin khác
+    if (user.role === 'admin') {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Không thể khoá tài khoản admin khác');
     }
     if (user.banned) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'User is already banned')
     }
     user.banned = true
     await user.save()
+    return { message: 'Tài khoản đã bị khóa thành công' };
   } catch (error) {
     throw error
   }
@@ -345,14 +353,27 @@ const banSelf = async (userId) => {
   }
 }
 
-const destroyUser = async (userId) => {
+const destroyUser = async (userId, currentUser) => {
   try {
+    if (!currentUser || currentUser.role !== 'admin') {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền thực hiện hành động này');
+    }
+
     const user = await UserModel.findById(userId)
     if (!user || !['host', 'tenant'].includes(user.role)) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
+
+    //Không cho phép xóa admin khác
+    if (user.role === 'admin') {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Không thể xóa tài khoản admin');
+    }
+    if (user._destroyed) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'User has already been deleted');
+    }
     user._destroyed = true
     await user.save()
+    return { message: 'User has been deleted (soft delete) successfully' };
   } catch (error) {
     throw error
   }

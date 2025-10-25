@@ -219,6 +219,40 @@ const getRoomDetails = async (roomId) => {
   }
 }
 
+const getRoomDetailsBySlug = async (slug) => {
+  try {
+    const query = { slug, status: 'approved', _destroyed: false } // slug duy nhất
+
+    const room = await RoomModel.findOneAndUpdate(
+      query,
+      { $inc: { viewCount: 1 } }, // tăng viewCount
+      { new: true }
+    )
+      .populate({ path: 'amenities', select: 'name description' })
+      .populate({ path: 'likeBy', select: 'firstName lastName avatar' })
+      .populate({ path: 'ward', select: 'name' })
+      .select(
+        'amenities status name slug description price address ward location avgRating totalRatings totalLikes likeBy images viewCount'
+      )
+
+    if (!room) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Room not found')
+    }
+
+    const reviews = await ReviewModel.find({ roomId: room._id, _hidden: false })
+      .populate('userId', 'name avatar')
+      .select('comment rating createdAt')
+      .sort({ createdAt: -1 })
+
+    return {
+      ...room.toObject(),
+      reviews
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
 const updateRoom = async (roomId, updateData, userId, role) => {
   try {
     const room = await RoomModel.findById(roomId)
@@ -525,6 +559,29 @@ const getHotRooms = async () => {
   }
 }
 
+const reportRoom = async (roomId, userId, reportReason) => {
+  try {
+    const room = await RoomModel.findById(roomId)
+    if (!room) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy đánh giá.')
+    }
+
+    const alreadyReported = room.reports.some(
+      (report) => report.userId.toString() === userId.toString()
+    )
+
+    if (alreadyReported) {
+      throw new ApiError(StatusCodes.CONFLICT, 'Bạn đã báo cáo đánh giá này rồi.')
+    }
+
+    room.reports.push({ userId, reason: reportReason })
+    await room.save()
+    return { success: true, message: 'Báo cáo đã được gửi thành công.' }
+  } catch (error) {
+    throw error
+  }
+}
+
 export const roomService = {
   createNew,
   getAllRooms,
@@ -536,6 +593,7 @@ export const roomService = {
   getUserSuggestedRooms,
   getAdminRoomDetails,
   getRoomDetails,
+  getRoomDetailsBySlug,
   updateRoom,
   updateAvailability,
   destroyRoom,
@@ -546,6 +604,7 @@ export const roomService = {
   approveRoom,
   updateRoomCoordinates,
   getNearbyRooms,
-  getHotRooms
+  getHotRooms,
+  reportRoom
 }
 
