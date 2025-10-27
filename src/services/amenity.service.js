@@ -13,7 +13,7 @@ const createNew = async (amenityData) => {
 
 const getAllAmenities = async () => {
   try {
-    const amenities = await AmenityModel.find()
+    const amenities = await AmenityModel.find({ isDeleted: false })
     return amenities
   } catch (error) {
     throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message)
@@ -22,9 +22,14 @@ const getAllAmenities = async () => {
 
 const updateAmenity = async (amenityId, updateData) => {
   try {
-    const updatedAmenity = await AmenityModel.findByIdAndUpdate(amenityId, updateData, { new: true })
-    if (!updatedAmenity) throw new ApiError(StatusCodes.NOT_FOUND, 'Amenity not found')
-    return updatedAmenity
+    const amenity = await AmenityModel.findOneAndUpdate(
+      { _id: amenityId, isDeleted: false },
+      updateData,
+      { new: true }
+    )
+
+    if (!amenity) throw new ApiError(StatusCodes.NOT_FOUND, 'Amenity not found')
+    return amenity
   } catch (error) {
     throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message)
   }
@@ -32,9 +37,15 @@ const updateAmenity = async (amenityId, updateData) => {
 
 const deleteAmenity = async (amenityId) => {
   try {
-    const deletedAmenity = await AmenityModel.findByIdAndDelete(amenityId)
-    if (!deletedAmenity) throw new ApiError(StatusCodes.NOT_FOUND, 'Amenity not found')
-    return deletedAmenity
+    const amenity = await AmenityModel.findById(amenityId)
+    if (!amenity || amenity.isDeleted) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Amenity not found')
+    }
+
+    amenity.isDeleted = true
+    await amenity.save()
+
+    return amenity
   } catch (error) {
     throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message)
   }

@@ -28,13 +28,15 @@ Router.get('/stats/topViewedRooms', verifyToken, verifyAdmin, adminController.ge
 Router.get('/stats/logins', verifyToken, verifyAdmin, adminController.getLoginStats)
 Router.get('/stats/monthlyUsers', verifyToken, verifyAdmin, adminController.getUserMonthlyStats)
 Router.get('/stats/topHosts', verifyToken, verifyAdmin, adminController.getTopHosts)
+Router.get('/stats/reports', verifyToken, verifyAdmin, adminController.getReportStats)
+Router.post('/stats/processReports', verifyToken, verifyAdmin, adminController.processReports)
 
 Router.post('/rooms', verifyToken, verifyAdmin, roomValidation.createNew, roomController.createNew)
-Router.get('/rooms', verifyToken, verifyAdmin, roomValidation.pagingValidate, roomController.getAllRooms)
+Router.get('/rooms', verifyToken, verifyAdmin, roomValidation.pagingValidate, roomController.getAllRoomsForAdmin)
 Router.get('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.getAdminRoomDetails)
 Router.patch('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.updateRoom)
-Router.put('/rooms/:id/approve', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.approveRoom)
-Router.put('/rooms/:id/coordinates', verifyToken, verifyAdmin, roomValidation.updateRoomCoordinates, roomController.updateRoomCoordinates)
+Router.patch('/rooms/:id/approve', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.approveRoom)
+Router.patch('/rooms/:id/coordinates', verifyToken, verifyAdmin, roomValidation.updateRoomCoordinates, roomController.updateRoomCoordinates)
 Router.delete('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.destroyRoom)
 
 Router.get('/reviews', verifyToken, verifyAdmin, adminValidation.getFilteredReviews, adminController.getFilteredReviews)
