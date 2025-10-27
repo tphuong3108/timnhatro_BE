@@ -124,19 +124,6 @@ const changePassword = async (req, res, next) => {
   }
 }
 
-const getProfile = async (req, res, next) => {
-  try {
-    const userId = req?.query?.userId || req.user.id || req.user._id || req.user.userId
-    const profile = await userService.getUserProfile(userId)
-    res.status(StatusCodes.OK).json({
-      success: true,
-      user: profile
-    });
-  } catch (error) {
-    next(error)
-  }
-}
-
 const getUserDetails = async (req, res, next) => {
   try {
     const userId = req.params.id
@@ -169,7 +156,7 @@ const banUser = async (req, res, next) => {
 const banSelf = async (req, res, next) => {
   try {
     const userId = req.user.id; 
-    await userService.banUser(userId);
+    await userService.banSelf(userId);
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -251,7 +238,6 @@ export const userController = {
   changePassword,
   verifyEmail,
   sendPasswordResetOTP,
-  getProfile,
   banUser,
   banSelf,
   destroyUser,

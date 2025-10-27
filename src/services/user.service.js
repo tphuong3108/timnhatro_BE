@@ -5,6 +5,8 @@ import UserModel from '~/models/User.model.js'
 import OTPModel from '~/models/OTP.model.js'
 import RefreshTokenModel from '~/models/RefreshToken.model'
 import sendMail from '~/utils/sendMail.js'
+import ReviewModel from '~/models/Review.model.js'
+import RoomModel from '~/models/Room.model.js'
 
 const register = async (userData) => {
   try {
@@ -86,12 +88,11 @@ const verifyEmail = async (verificationData) => {
     await OTPModel.deleteOne({ _id: otpRecord._id })
     return { message: 'Email verified successfully. You can now log in.' }
   } catch (error) {
-    if (error instanceof ApiError) throw error
-    // Check for duplicate key error
+    console.error('Error details:', error);
     if (error.code === 11000) {
-      throw new ApiError(StatusCodes.CONFLICT, 'Email already exists.')
+      throw new ApiError(StatusCodes.CONFLICT, `Duplicate field: ${Object.keys(error.keyValue)}`);
     }
-    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to verify email')
+    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to verify email');
   }
 }
 
@@ -120,35 +121,40 @@ const sendPasswordResetOTP = async (email) => {
 const login = async (loginData) => {
   try {
     const user = await UserModel.findOne({ email: loginData.email })
-      .select('_id role email firstName lastName password banned emailVerified')
+      .select('_id role email firstName lastName password banned emailVerified _destroyed');
+
     if (!user) {
-      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password')
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
     }
+
     if (!user.emailVerified) {
-      throw new ApiError(StatusCodes.FORBIDDEN, 'Please verify your email before logging in.')
+      throw new ApiError(StatusCodes.FORBIDDEN, 'Please verify your email before logging in.');
     }
-    const isPasswordValid = await user.comparePassword(String(loginData.password).trim())
+
+    if (user.banned || user._destroyed) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been banned or deleted');
+    }
+
+    const isPasswordValid = await user.comparePassword(String(loginData.password).trim());
     if (!isPasswordValid) {
-      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password')
-    }
-    if (user.banned) {
-      throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been banned')
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
     }
 
-    const { AccessToken, RefreshToken } = jwtGenerate({ id: user._id, email: user.email, role: user.role })
+    const { AccessToken, RefreshToken } = jwtGenerate({ id: user._id, email: user.email, role: user.role });
 
-    await RefreshTokenModel.create({ userId: user._id, token: RefreshToken })
+    await RefreshTokenModel.create({ userId: user._id, token: RefreshToken });
+    await user.saveLog(loginData.ipAddress, loginData.device);
 
-    await user.saveLog(loginData.ipAddress, loginData.device)
     const userData = {
       userId: user._id,
       role: user.role,
       email: user.email,
       fullName: user.firstName + ' ' + user.lastName
-    }
-    return { userData, accessToken: AccessToken, refreshToken: RefreshToken }
+    };
+
+    return { userData, accessToken: AccessToken, refreshToken: RefreshToken };
   } catch (error) {
-    throw error
+    throw error;
   }
 }
 
@@ -157,8 +163,9 @@ const handleOAuthLogin = async (user, ipAddress, device) => {
     if (!user) {
       throw new ApiError(StatusCodes.UNAUTHORIZED, 'User information is missing from OAuth provider.');
     }
-    if (user.banned) {
-      throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been banned');
+
+    if (user.banned || user._destroyed) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been banned or deleted');
     }
 
     const { AccessToken, RefreshToken } = jwtGenerate({ id: user._id, email: user.email, role: user.role });
@@ -172,11 +179,12 @@ const handleOAuthLogin = async (user, ipAddress, device) => {
       email: user.email,
       fullName: user.firstName + ' ' + user.lastName
     };
+
     return { userData, accessToken: AccessToken, refreshToken: RefreshToken };
   } catch (error) {
     throw error;
   }
-};
+}
 
 const requestToken = async ({ refreshToken }) => {
   try {
@@ -257,57 +265,81 @@ const resetPassword = async (reqBody) => {
   }
 }
 
-const getUserProfile = async (userId) => {
+const getMyProfile = async (userId) => {
   try {
-    const user = await UserModel.findById(userId).select('-password')
-    if (!user || !['host', 'tenant'].includes(user.role) || user._destroyed) {
+    const user = await UserModel.findById(userId)
+      .select('-password -__v')
+      .populate('favorites', 'name address avgRating totalRatings')
+      .populate('sharedRooms', 'title content status')
+
+    if (!user || !['tenant', 'host'].includes(user.role) || user._destroyed) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
     if (user.banned) {
       throw new ApiError(StatusCodes.FORBIDDEN, 'This account has been banned')
     }
-    
+
+    const reviews = await ReviewModel.find({ user: userId })
+      .populate('room', 'name address avgRating totalRatings')
+      .select('rating comment createdAt updatedAt')
+
+    // Nếu là host thì lấy danh sách phòng họ tạo
+    let myRooms = []
+    if (user.role === 'host') {
+      myRooms = await RoomModel.find({ createdBy: userId, isDeleted: false })
+        .populate('amenities', 'name')
+        .populate('ward', 'name')
+        .select('name slug description price amenities address ward images videos avgRating status availability createdAt updatedAt')
+    }
+
     return {
-      userId: user._id,
+      id: user._id,
       email: user.email,
       fullName: `${user.firstName} ${user.lastName}`,
       role: user.role,
       avatar: user.avatar || null,
+      phone: user.phone || '',
       bio: user.bio || '',
       favorites: user.favorites || [],
-      sharedRooms: user.sharedRooms || [],  
+      sharedRooms: user.sharedRooms || [],
+      reviews: reviews || [],
+      myRooms, 
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
     }
   } catch (error) {
     throw error
   }
 }
 
-const getUserDetails = async (userId) => {
+const getPublicProfile = async (userId) => {
   try {
     const user = await UserModel.findById(userId)
-      .select('-password -__v') 
-      .populate('favorites', 'name address avgRating totalRatings')
-      .populate('sharedRooms', 'title content');
+      .select('firstName lastName avatar role bio')
 
-    if (!user || !['host', 'tenant'].includes(user.role) ||  user._destroyed) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
+    if (!user || !['tenant', 'host'].includes(user.role) || user._destroyed) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
     if (user.banned) {
       throw new ApiError(StatusCodes.FORBIDDEN, 'This account has been banned')
-    }   
+    }
+
+    let publicRooms = []
+    if (user.role === 'host') {
+      publicRooms = await RoomModel.find({ createdBy: userId, isDeleted: false, status: 'approved' })
+        .populate('amenities', 'name')
+        .populate('ward', 'name')
+        .select('name slug description price amenities address ward images videos avgRating status availability createdAt updatedAt')
+    }
 
     return {
-      userId: user._id,
+      id: user._id,
       fullName: `${user.firstName} ${user.lastName}`,
       role: user.role,
       avatar: user.avatar || null,
-
-      email: user.email,
-
-      favorites: user.favorites || [],
-      sharedRooms: user.sharedRooms || [],
-    
-    };
+      bio: user.bio || '',
+      publicRooms: publicRooms
+    }
   } catch (error) {
     throw error
   }
@@ -412,6 +444,34 @@ const updateUserLocation = async (userId, longitude, latitude) => {
   }
 };
 
+const upgradeToHost = async (userId) => {
+  const user = await UserModel.findById(userId)
+
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy người dùng.')
+  }
+
+  if (user.role !== 'tenant') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Chỉ người dùng tenant mới có thể nâng cấp lên host.')
+  }
+
+  if (user.banned || user._destroyed) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Tài khoản này không thể thay đổi quyền.')
+  }
+
+  user.role = 'host'
+  user.updatedAt = new Date()
+  await user.save()
+
+  return {
+    id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    newRole: user.role
+  }
+}
+
 export const userService = {
   register,
   login,
@@ -423,11 +483,12 @@ export const userService = {
   changePassword,
   verifyEmail,
   sendPasswordResetOTP,
-  getUserDetails,
-  getUserProfile,
+  getMyProfile,
+  getPublicProfile,
   banUser,
   banSelf,
   destroyUser,
   updateUserProfile,
   updateUserLocation,
+  upgradeToHost
 }

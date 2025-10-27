@@ -1,12 +1,27 @@
 import { StatusCodes } from 'http-status-codes'
 import { userService } from '~/services/user.service'
 
-const getProfile = async (req, res, next) => {
+const getMyProfile = async (req, res, next) => {
   try {
     const userId = req.user.id
-    const profile = await userService.getUserProfile(userId)
+    const profile = await userService.getMyProfile(userId)
     res.status(StatusCodes.OK).json({
-      message: 'Profile retrieved successfully',
+      success: true,
+      message: 'Your profile retrieved successfully',
+      data: profile
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getPublicProfile = async (req, res, next) => {
+  try {
+    const userId = req.params.id || req.query.userId
+    const profile = await userService.getPublicProfile(userId)
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Public profile retrieved successfully',
       data: profile
     })
   } catch (error) {
@@ -40,8 +55,25 @@ const getUserReviews = async (req, res, next) => {
   }
 }
 
+const upgradeToHost = async (req, res, next) => {
+  try {
+    const userId = req.user.id
+    const result = await userService.upgradeToHost(userId)
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Nâng cấp quyền thành công.',
+      data: result
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const profileController = {
-  getProfile,
+  getMyProfile,
+  getPublicProfile,
   updateProfile,
-  getUserReviews
+  getUserReviews,
+  upgradeToHost
 }

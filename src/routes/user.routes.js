@@ -36,7 +36,6 @@ Router.get(
 )
 
 // --- User Profile & Content ---
-Router.get('/profile', verifyToken, userController.getProfile)
 Router.put('/location', verifyToken, userValidation.updateUserLocation, userController.updateUserLocation)
 Router.put('/me/ban', verifyToken, userController.banSelf)
 
