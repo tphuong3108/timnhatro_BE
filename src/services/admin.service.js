@@ -292,7 +292,113 @@ const getTopHosts = async () => {
   return topHosts
 }
 
+const getReportsStats = async () => {
+  try {
+    // ===== Thống kê báo cáo phòng =====
+    const reportedRooms = await RoomModel.aggregate([
+      { $match: { 'reports.0': { $exists: true } } }, // chỉ lấy phòng có report
+      { $unwind: "$reports" }, // tách từng report
+      {
+        $group: {
+          _id: "$_id",
+          name: { $first: "$name" },
+          totalReports: { $sum: 1 },
+          reports: { $push: "$reports" }
+        }
+      },
+      { $sort: { totalReports: -1 } } // sắp xếp theo số report giảm dần
+    ]);
 
+    // ===== Thống kê báo cáo review =====
+    const reportedReviews = await ReviewModel.aggregate([
+      { $match: { 'reports.0': { $exists: true } } }, // chỉ lấy review có report
+      { $unwind: "$reports" },
+      {
+        $group: {
+          _id: "$_id",
+          roomId: { $first: "$roomId" },
+          comment: { $first: "$comment" },
+          totalReports: { $sum: 1 },
+          reports: { $push: "$reports" }
+        }
+      },
+      { $sort: { totalReports: -1 } }
+    ]);
+
+    return { reportedRooms, reportedReviews };
+  } catch (error) {
+    throw error;
+  }
+}
+
+const handleReports = async () => {
+  try {
+    // ===== Phòng =====
+    const reportedRooms = await RoomModel.aggregate([
+      { $unwind: "$reports" },
+      { $group: { 
+          _id: "$_id", 
+          createdBy: { $first: "$createdBy" },
+          name: { $first: "$name" },
+          totalReports: { $sum: 1 }
+        } 
+      },
+      { $sort: { totalReports: -1 } }
+    ]);
+
+    const topRooms = reportedRooms.slice(0, 5).map(r => ({
+      roomId: r._id,
+      name: r.name,
+      totalReports: r.totalReports
+    }));
+
+    for (const room of reportedRooms) {
+      if (room.totalReports >= 5) {
+        await RoomModel.findByIdAndUpdate(room._id, { status: "hidden" });
+      }
+      if (room.totalReports >= 10) {
+        await UserModel.findByIdAndUpdate(room.createdBy, { banned: true });
+      }
+    }
+
+    // ===== Review =====
+    const reportedReviews = await ReviewModel.aggregate([
+      { $unwind: "$reports" },
+      { $group: { 
+          _id: "$_id", 
+          userId: { $first: "$userId" }, 
+          comment: { $first: "$comment" },
+          totalReports: { $sum: 1 } 
+        } 
+      },
+      { $sort: { totalReports: -1 } }
+    ]);
+
+    const topReviews = reportedReviews.slice(0, 5).map(r => ({
+      reviewId: r._id,
+      comment: r.comment,
+      totalReports: r.totalReports
+    }));
+
+    for (const review of reportedReviews) {
+      if (review.totalReports >= 5) {
+        await ReviewModel.findByIdAndUpdate(review._id, { _hidden: true });
+      }
+      if (review.totalReports >= 10) {
+        await UserModel.findByIdAndUpdate(review.userId, { banned: true });
+      }
+    }
+
+    return {
+      success: true,
+      message: "Đã xử lý report thành công",
+      topRooms,
+      topReviews
+    };
+  } catch (error) {
+    throw error;
+  }
+}
 
 export const adminService = {
   getMe,
@@ -305,5 +411,7 @@ export const adminService = {
   getTopViewedRooms,
   getLoginStats,
   getUserMonthlyStats,
-  getTopHosts
+  getTopHosts,
+  getReportsStats,
+  handleReports
 }

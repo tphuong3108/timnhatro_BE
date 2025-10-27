@@ -5,11 +5,11 @@ import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from '~/utils/validators.js'
 
 const paramSlugValidate = async (req, res, next) => {
   const slugRule = Joi.object({
-    id: Joi.string().trim().min(1).max(100).required().messages({
-      'string.base': 'id must be a string',
-      'string.empty': 'id must not be empty',
-      'string.min': 'id must be at least 1 character long',
-      'string.max': 'id must be at most 100 characters long'
+    slug: Joi.string().trim().min(1).max(100).required().messages({
+      'string.base': 'Slug must be a string',
+      'string.empty': 'Slug must not be empty',
+      'string.min': 'Slug must be at least 1 character long',
+      'string.max': 'Slug must be at most 100 characters long'
     })
   })
   try {

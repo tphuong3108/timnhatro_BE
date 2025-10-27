@@ -154,6 +154,35 @@ const getTopHosts = async (req, res, next) => {
   }
 }
 
+const getReportStats = async (req, res, next) => {
+  try {
+    const data = await adminService.getReportsStats();
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Thống kê báo cáo thành công",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+const processReports = async (req, res, next) => {
+  try {
+    const data = await adminService.handleReports();
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: data.message,
+      data: {
+        topRooms: data.topRooms,
+        topReviews: data.topReviews
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export const adminController = {
   getMe,
   getOverviewStats,
@@ -165,5 +194,7 @@ export const adminController = {
   getTopViewedRooms,
   getLoginStats,
   getUserMonthlyStats,
-  getTopHosts 
+  getTopHosts,
+  getReportStats,
+  processReports
 }

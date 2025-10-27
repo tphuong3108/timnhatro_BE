@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
+import { get } from 'mongoose'
 import { roomService } from '~/services/room.service.js'
 
 const createNew = async (req, res, next) => {
@@ -24,6 +25,20 @@ const getAllRooms = async (req, res, next) => {
     const roomList = await roomService.getAllRooms(req.query)
     res.status(StatusCodes.OK).json({
       message: 'Room list retrieved successfully',
+      data: roomList
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getAllRoomsForAdmin = async (req, res, next) => {
+  try {
+    const roomList = await roomService.getAllRoomsForAdmin(req.query)
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Room list retrieved successfully (Admin)',
       data: roomList
     })
   } catch (error) {
@@ -86,6 +101,7 @@ const getRoomDetailsBySlug = async (req, res, next) => {
 
     res.status(StatusCodes.OK).json({
       success: true,
+      message: 'Lấy chi tiết phòng thành công',
       data: roomDetails
     })
   } catch (error) {
@@ -98,7 +114,9 @@ const updateRoom = async (req, res, next) => {
     const roomId = req.params.id
     const userId = req.user.id
     const role = req.user.role
+
     const updatedRoom = await roomService.updateRoom(roomId, req.body, userId, role)
+
     res.status(StatusCodes.OK).json({
       message: 'Đã cập nhật phòng thành công',
       data: updatedRoom
@@ -128,8 +146,13 @@ const updateAvailability = async (req, res, next) => {
 const destroyRoom = async (req, res, next) => {
   try {
     const roomId = req.params.id
-    await roomService.destroyRoom(roomId)
+    const userId = req.user.id
+    const role = req.user.role
+
+    await roomService.destroyRoom(roomId, userId, role)
+
     res.status(StatusCodes.OK).json({
+      success: true,
       message: 'Đã xóa phòng thành công'
     })
   } catch (error) {
@@ -286,9 +309,24 @@ const reportRoom = async (req, res, next) => {
   }
 }
 
+const getRoomsByWard = async (req, res, next) => {
+  try {
+    const { wardId } = req.params
+    const rooms = await roomService.getRoomsByWard(wardId)
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Lấy danh sách phòng theo phường/xã thành công',
+      data: rooms
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const roomController = {
   createNew,
   getAllRooms,
+  getAllRoomsForAdmin,
   getHostRooms,
   getApprovedRooms,
   searchRooms,
@@ -307,5 +345,6 @@ export const roomController = {
   getRoomsMapdata,
   getNearbyRooms,
   getHotRooms,
-  reportRoom
+  reportRoom,
+  getRoomsByWard
 }

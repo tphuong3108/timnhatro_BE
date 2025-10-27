@@ -11,7 +11,6 @@ import { roomController } from '~/controllers/room.controller.js'
 const Router = express.Router()
 
 Router.post('/rooms', verifyToken, verifyHost, roomValidation.createNew, roomController.createNew)
-Router.get('/rooms', verifyToken, verifyHost, roomValidation.pagingValidate, roomController.getAllRooms)
 Router.get('/rooms/:id', verifyToken, verifyHost, generalValidation.paramIdValidate, roomController.getAdminRoomDetails)
 Router.patch('/rooms/:id', verifyToken, verifyHost, generalValidation.paramIdValidate, roomController.updateRoom)
 Router.patch('/rooms/:id/availability', verifyToken, verifyHost, generalValidation.paramIdValidate, roomValidation.updateAvailability, roomController.updateAvailability)
