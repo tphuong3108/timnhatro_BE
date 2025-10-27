@@ -1,5 +1,5 @@
 import express from 'express'
-import { verifyToken } from '~/middlewares/auth.middleware.js'
+import { verifyToken, verifyRoles, verifyAdmin, verifyHost } from '~/middlewares/auth.middleware.js'
 import { roomValidation } from '~/validations/room.validation.js'
 import { roomController } from '~/controllers/room.controller.js'
 import { generalValidation } from '~/validations/general.validation.js'
@@ -12,9 +12,6 @@ Router.get('/search', roomValidation.searchValidate, roomController.searchRooms)
 // Lấy phòng gần đây
 Router.get('/nearby', roomValidation.nearbyRooms, roomController.getNearbyRooms)
 
-// Đề xuất / tạo phòng mới
-Router.post('/suggest', verifyToken, roomValidation.createNew, roomController.createNew)
-
 // Lấy danh sách phòng
 Router.get('/', roomValidation.pagingValidate, roomController.getAllRooms)
 
@@ -26,12 +23,17 @@ Router.get('/hot', roomController.getHotRooms)
 
 // Chi tiết phòng
 Router.get('/:id', generalValidation.paramSlugValidate, roomController.getRoomDetails)
+Router.get('/slug/:id', generalValidation.paramSlugValidate, roomController.getRoomDetailsBySlug)
 
 // Like phòng
-Router.patch('/:id', verifyToken, generalValidation.paramIdValidate, roomController.likeRoom)
+Router.patch('/:id', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.likeRoom)
 
 // Thêm / xóa phòng khỏi yêu thích
-Router.post('/:id/favorite', verifyToken, generalValidation.paramIdValidate, roomController.addToFavorites)
-Router.delete('/:id/favorite', verifyToken, generalValidation.paramIdValidate, roomController.removeFromFavorites)
+Router.post('/:id/favorite', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.addToFavorites)
+Router.delete('/:id/favorite', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.removeFromFavorites)
 
+// Tăng view phòng
+Router.post('/:id/view', roomController.addViewCount)
+// Báo cáo phòng
+Router.post('/:id/report', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomValidation.reportRoom, roomController.reportRoom)
 export const roomRoute = Router

@@ -20,9 +20,6 @@ Router.post('/forgot-password', verifyOtpRateLimiter, generalValidation.emailVal
 Router.post('/reset-password', userValidation.resetPassword, userController.resetPassword) //đặt lại mật khẩu
 Router.put('/change-password', verifyToken, userValidation.changePassword, userController.changePassword) //đổi mật khẩu
 
-Router.get('/profile', verifyToken, userController.getProfile)
-// Router.post('/logout', userController.logout)
-
 // Route for Facebook login
 Router.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email'], session: false }))
 Router.get(
@@ -39,7 +36,6 @@ Router.get(
 )
 
 // --- User Profile & Content ---
-Router.get('/profile', verifyToken, userController.getProfile)
 Router.put('/location', verifyToken, userValidation.updateUserLocation, userController.updateUserLocation)
 Router.put('/me/ban', verifyToken, userController.banSelf)
 

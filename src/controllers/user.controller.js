@@ -99,7 +99,11 @@ const requestToken = async (req, res, next) => {
 
 const getAllUsers = async (req, res, next) => {
   try {
-    const users = await userService.getAllUsers()
+    // Lấy role từ query: ?role=host hoặc ?role=host,tenant
+    const { role } = req.query
+    const roles = role ? role.split(',') : []
+
+    const users = await userService.getAllUsers(roles)
     res.status(StatusCodes.OK).json(users)
   } catch (error) {
     next(error)
@@ -120,19 +124,6 @@ const changePassword = async (req, res, next) => {
   }
 }
 
-const getProfile = async (req, res, next) => {
-  try {
-    const userId = req?.query?.userId || req.user.id || req.user._id || req.user.userId
-    const profile = await userService.getUserProfile(userId)
-    res.status(StatusCodes.OK).json({
-      success: true,
-      user: profile
-    });
-  } catch (error) {
-    next(error)
-  }
-}
-
 const getUserDetails = async (req, res, next) => {
   try {
     const userId = req.params.id
@@ -148,20 +139,24 @@ const getUserDetails = async (req, res, next) => {
 
 const banUser = async (req, res, next) => {
   try {
-    const userId = req.params.id
-    await userService.banUser(userId)
+    const userId = req.params.id;
+    const currentUser = req.user;
+
+    const result = await userService.banUser(userId, currentUser);
+
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'User has been banned successfully'
-    })
+      message: result.message
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
 }
+
 const banSelf = async (req, res, next) => {
   try {
     const userId = req.user.id; 
-    await userService.banUser(userId);
+    await userService.banSelf(userId);
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -172,17 +167,19 @@ const banSelf = async (req, res, next) => {
   }
 };
 
-
 const destroyUser = async (req, res, next) => {
   try {
-    const userId = req.params.id
-    await userService.destroyUser(userId)
+    const userId = req.params.id;
+    const currentUser = req.user;
+
+    const result = await userService.destroyUser(userId, currentUser);
+
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'User has been deleted successfully'
-    })
+      message: result.message
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
 }
 
@@ -241,7 +238,6 @@ export const userController = {
   changePassword,
   verifyEmail,
   sendPasswordResetOTP,
-  getProfile,
   banUser,
   banSelf,
   destroyUser,
