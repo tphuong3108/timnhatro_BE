@@ -6,7 +6,11 @@ const createReview = async (req, res, next) => {
   try {
     const { roomId } = req.params
     const userId = req.user.id
-    const newReview = await reviewService.createReview(roomId, req.body, userId)
+    const images = req.files?.map(f => f.path) || []
+    const newReview = await reviewService.createReview(roomId, {
+      ...req.body,
+      images
+    }, userId)
 
     res.status(StatusCodes.CREATED).json({ success: true, data: newReview })
   } catch (error) {
@@ -44,7 +48,12 @@ const updateReview = async (req, res, next) => {
   try {
     const { id } = req.params
     const userId = req.user.id
-    const updatedReview = await reviewService.updateReview(id, req.body, userId)
+    const images = req.files?.map(f => f.path) || []
+
+    const updatedReview = await reviewService.updateReview(id, {
+      ...req.body,
+      ...(images.length && { images })
+    }, userId)
     res.status(StatusCodes.OK).json({ success: true, data: updatedReview })
   } catch (error) {
     next(error)

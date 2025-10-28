@@ -6,11 +6,13 @@ const createNew = async (req, res, next) => {
   try {
     const userId = req.user.id
     const role = req.user.role
-    const newRoom = await roomService.createNew(
-      req.body,
-      userId,
-      role === 'admin' ? userId : null
-    )
+    const images = req.files['images']?.map(f => f.path) || []
+    const videos = req.files['videos']?.map(f => f.path) || []
+    const newRoom = await roomService.createNew({
+      ...req.body,
+      images,
+      videos
+    }, userId, role === 'admin' ? userId : null)
     res.status(StatusCodes.CREATED).json({
       message: 'Room created successfully',
       data: newRoom
@@ -115,7 +117,14 @@ const updateRoom = async (req, res, next) => {
     const userId = req.user.id
     const role = req.user.role
 
-    const updatedRoom = await roomService.updateRoom(roomId, req.body, userId, role)
+    const images = req.files['images']?.map(f => f.path) || []
+    const videos = req.files['videos']?.map(f => f.path) || []
+
+    const updatedRoom = await roomService.updateRoom(roomId, {
+      ...req.body,
+      ...(images.length && { images }),
+      ...(videos.length && { videos })
+    }, userId, role)
 
     res.status(StatusCodes.OK).json({
       message: 'Đã cập nhật phòng thành công',

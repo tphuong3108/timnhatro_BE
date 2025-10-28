@@ -32,7 +32,11 @@ const getPublicProfile = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.id
-    const updatedProfile = await userService.updateUserProfile(userId, req.body)
+    const avatar = req.file ? req.file.path : undefined
+    const updatedProfile = await userService.updateUserProfile(userId, {
+      ...req.body,
+      ...(avatar && { avatar: avatar })
+    })
     res.status(StatusCodes.OK).json({
       message: 'Profile updated successfully',
       data: updatedProfile
