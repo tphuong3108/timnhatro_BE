@@ -240,10 +240,13 @@ const approveRoom = async (req, res, next) => {
   try {
     const roomId = req.params.id
     const adminId = req.user.id
-    const approvedRoom = await roomService.approveRoom(roomId, adminId)
+    const { status } = req.body // 'approved' hoặc 'rejected'
+
+    const updatedRoom = await roomService.approveRoom(roomId, adminId, status)
+
     res.status(StatusCodes.OK).json({
-      message: 'Phòng đã được phê duyệt thành công',
-      data: approvedRoom
+      message: `Phòng đã được ${status === 'approved' ? 'phê duyệt' : 'từ chối'} thành công`,
+      data: updatedRoom
     })
   } catch (error) {
     next(error)

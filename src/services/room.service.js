@@ -315,16 +315,12 @@ const updateRoom = async (roomId, updateData, userId, role) => {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Phòng này đã bị xóa, không thể chỉnh sửa')
     }
 
+    
+    if (room.createdBy.toString() !== userId.toString()) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền sửa phòng này.')
+    }
+      
     if (role === 'host') {
-      // Nếu là Host → chỉ được sửa phòng của chính mình
-      if (!room.createdBy) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, 'Phòng này chưa có chủ sở hữu hợp lệ')
-      }
-
-      if (room.createdBy.toString() !== userId.toString()) {
-        throw new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền sửa phòng này')
-      }
-
       // Nếu là host và phòng đã được duyệt → đổi lại thành pending để admin kiểm duyệt lại
       if (room.status === 'approved') {
         room.status = 'pending'
@@ -346,7 +342,7 @@ const updateAvailability = async (roomId, availability, userId, role) => {
   const room = await RoomModel.findById(roomId)
   if (!room) throw new ApiError(StatusCodes.NOT_FOUND, 'Room not found')
 
-  if (role === 'host' && room.createdBy.toString() !== userId.toString()) {
+  if (room.createdBy.toString() !== userId.toString()) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'You are not allowed to update this room')
   }
 
@@ -481,22 +477,27 @@ const getFavoriteRooms = async (userId) => {
   }
 }
 
-const approveRoom = async (roomId, adminId) => {
-  try {
-    const room = await RoomModel.findById(roomId)
-    if (!room) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy địa điểm.')
-    }
-    if (room.status === 'approved') {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Địa điểm đã được phê duyệt.')
-    }
-    room.status = 'approved'
-    room.verifiedBy = adminId
-    await room.save()
-    return room
-  } catch (error) {
-    throw error
+const approveRoom = async (roomId, adminId, status) => {
+  const validStatuses = ['approved', 'rejected']
+
+  if (!validStatuses.includes(status)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Trạng thái không hợp lệ (chỉ cho phép approved hoặc rejected).')
   }
+
+  const room = await RoomModel.findById(roomId)
+  if (!room) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy địa điểm.')
+  }
+
+  if (room.status !== 'pending') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Chỉ có thể phê duyệt hoặc từ chối phòng đang ở trạng thái pending.')
+  }
+
+  room.status = status
+  room.verifiedBy = adminId
+
+  await room.save()
+  return room
 }
 
 const updateRoomCoordinates = async (roomId, latitude, longitude) => {
