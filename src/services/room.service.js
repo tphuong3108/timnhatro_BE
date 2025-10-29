@@ -583,9 +583,6 @@ const searchRooms = async (filterCriteria) => {
     if (filterCriteria.address) {
       query.address = { $regex: filterCriteria.address, $options: 'i' } // Case-insensitive search
     }
-    if (filterCriteria.district) {
-      query.district = { $regex: filterCriteria.district, $options: 'i' } // Case-insensitive search
-    }
     if (filterCriteria.ward) {
       const wards = await WardModel.find({ name: { $regex: filterCriteria.ward, $options: 'i' } }).select('_id')
       if (wards.length > 0) {
