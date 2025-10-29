@@ -28,7 +28,10 @@ const createReview = async (roomId, reviewData, userId) => {
       userId: userId
     })
     await newReview.updateRoomAvgRating()
-    return newReview
+    const populatedReview = await ReviewModel.findById(newReview._id)
+      .populate('userId', 'firstName lastName name avatar email')
+      .select('comment rating createdAt userId')
+    return populatedReview
   } catch (error) {
     throw error
   }
@@ -47,7 +50,7 @@ const getReviewsByRoomId = async (queryParams) => {
     const query = { roomId: queryParams.roomId }
 
     const reviews = await ReviewModel.find({ ...query, _hidden: false, isDeleted: false })
-      .populate('userId', 'name avatar') // Lấy thông tin người dùng
+      .populate('userId', 'firstName lastName name avatar') // Lấy thông tin người dùng
       .sort({ createdAt: -1 })
       .skip(startIndex)
       .limit(limit)

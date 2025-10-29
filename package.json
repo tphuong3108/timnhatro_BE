@@ -15,7 +15,11 @@
   "dependencies": {
     "@babel/runtime": "^7.28.4",
     "bcryptjs": "^3.0.2",
+<<<<<<< HEAD
     "cloudinary": "^2.7.0",
+=======
+    "cloudinary": "^1.41.3",
+>>>>>>> 015e514 (sửa truyền full name, ảnh video ở trong phòng đã lưu với search)
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
