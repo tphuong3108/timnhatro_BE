@@ -58,30 +58,38 @@ const createNew = async (req, res, next) => {
       ).length(2).required()
     }).required(),
     images: Joi.array().items(
-      Joi.string().uri().messages({
-        'string.base': 'each image must be a string',
-        'string.uri': 'each image must be a valid URL'
+      Joi.string().messages({
+        'string.base': 'each image must be a string'
       })
-    ).min(1).required().messages({
-      'array.base': 'images must be an array of strings',
-      'array.min': 'at least 1 image is required'
+    ).optional().default([]).messages({
+      'array.base': 'images must be an array of strings'
     }),
     videos: Joi.array().items(
       Joi.string().messages({
         'string.base': 'each video must be a string'
       })
-    ).optional(),
+    ).optional().default([]),
   })
   try {
-    // if (req.body.location && typeof req.body.location === 'string') {
-    //   req.body.location = JSON.parse(req.body.location)
-    // }
-    // if (req.body.amenities && typeof req.body.amenities === 'string') {
-    //   req.body.amenities = JSON.parse(req.body.amenities)
-    // }
-    // if (req.body.ward && typeof req.body.ward === 'string') {
-    //   req.body.ward = JSON.parse(req.body.ward)[0]
-    // }
+    // Nếu có file upload thì copy path vào req.body.images/videos để Joi không báo lỗi
+    if (req.files?.images?.length) {
+      req.body.images = req.files.images.map(f => f.path || f.secure_url || f.location || '')
+    }
+    if (req.files?.videos?.length) {
+      req.body.videos = req.files.videos.map(f => f.path || f.secure_url || f.location || '')
+    }
+
+    // Parse JSON string nếu client gửi dạng multipart
+    if (typeof req.body.location === 'string') {
+      try { req.body.location = JSON.parse(req.body.location) } catch {}
+    }
+    if (typeof req.body.amenities === 'string') {
+      try { req.body.amenities = JSON.parse(req.body.amenities) } catch {}
+    }
+    if (typeof req.body.images === 'string') {
+      try { req.body.images = JSON.parse(req.body.images) } catch {}
+    }
+
     const data = req?.body ? req.body : {}
     await validationRule.validateAsync(data, { abortEarly: false })
     next()
@@ -131,12 +139,10 @@ const updateRoomValidate = async (req, res, next) => {
     }).optional(),
 
     images: Joi.array().items(
-      Joi.string().uri().messages({
-        'string.uri': 'each image must be a valid URL'
+      Joi.string().messages({
+        'string.base': 'each image must be a string'
       })
-    ).min(1).messages({
-      'array.base': 'images must be an array of strings'
-    }).optional(),
+    ).optional().default([]),
 
     videos: Joi.array().items(
       Joi.string().messages({

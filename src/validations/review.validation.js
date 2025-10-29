@@ -24,14 +24,26 @@ const createReview = async (req, res, next) => {
       'string.min': 'comment phải có ít nhất 3 ký tự',
       'any.required': 'comment là trường bắt buộc'
     }),
-    images: Joi.array().items(Joi.string()).optional()
+    images: Joi.array().items(Joi.string()).optional().default([]),
   })
 
   try {
+    // Nếu có file upload thì copy path vào req.body.images để Joi không báo lỗi
+    if (req.files?.images?.length) {
+      req.body.images = req.files.images.map(f => f.path || f.secure_url || f.location || '')
+    }
+
+    // Parse JSON string nếu client gửi multipart/form-data
+    if (typeof req.body.images === 'string') {
+      try { req.body.images = JSON.parse(req.body.images) } catch {}
+    }
+
     const roomIdData = req?.params || {}
     const data = req?.body || {}
+
     await roomIdRule.validateAsync(roomIdData, { abortEarly: false })
     await createReviewRule.validateAsync(data, { abortEarly: false })
+
     next()
   } catch (error) {
     next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
@@ -74,13 +86,25 @@ const updateReview = async (req, res, next) => {
       'string.empty': 'comment không được để trống',
       'string.min': 'comment phải có ít nhất 3 ký tự'
     }),
-    images: Joi.array().items(Joi.string()).optional()
+    images: Joi.array().items(Joi.string()).optional().default([]),
   })
   try {
+    // Nếu có file upload thì copy path vào req.body.images để Joi không báo lỗi
+    if (req.files?.images?.length) {
+      req.body.images = req.files.images.map(f => f.path || f.secure_url || f.location || '')
+    }
+
+    // Parse JSON string nếu client gửi multipart/form-data
+    if (typeof req.body.images === 'string') {
+      try { req.body.images = JSON.parse(req.body.images) } catch {}
+    }
+
     const reviewIdData = req?.params || {}
     const data = req?.body || {}
+
     await idRule.validateAsync(reviewIdData, { abortEarly: false })
     await updateReviewRule.validateAsync(data, { abortEarly: false })
+
     next()
   } catch (error) {
     next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))

@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { userService } from '~/services/user.service'
+import { processMediaFields } from '../utils/media.js'
 
 const getMyProfile = async (req, res, next) => {
   try {
@@ -32,10 +33,11 @@ const getPublicProfile = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.id
-    const avatar = req.file ? req.file.path : undefined
+    const media = await processMediaFields(req, { avatarField: 'avatar' })
+    const avatar = media.avatar
     const updatedProfile = await userService.updateUserProfile(userId, {
       ...req.body,
-      ...(avatar && { avatar: avatar })
+      ...(avatar && { avatar })
     })
     res.status(StatusCodes.OK).json({
       message: 'Profile updated successfully',

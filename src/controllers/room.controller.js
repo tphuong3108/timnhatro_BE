@@ -1,13 +1,16 @@
 import { StatusCodes } from 'http-status-codes'
 import { get } from 'mongoose'
 import { roomService } from '~/services/room.service.js'
+import { processMediaFields } from '../utils/media.js'
 
 const createNew = async (req, res, next) => {
   try {
     const userId = req.user.id
     const role = req.user.role
-    const images = req.files['images']?.map(f => f.path) || []
-    const videos = req.files['videos']?.map(f => f.path) || []
+    const media = await processMediaFields(req, { imageField: 'images', videoField: 'videos' })
+    const images = media.images || []
+    const videos = media.videos || []
+
     const newRoom = await roomService.createNew({
       ...req.body,
       images,
@@ -117,8 +120,9 @@ const updateRoom = async (req, res, next) => {
     const userId = req.user.id
     const role = req.user.role
 
-    const images = req.files['images']?.map(f => f.path) || []
-    const videos = req.files['videos']?.map(f => f.path) || []
+    const media = await processMediaFields(req, { imageField: 'images', videoField: 'videos' })
+    const images = media.images || []
+    const videos = media.videos || []
 
     const updatedRoom = await roomService.updateRoom(roomId, {
       ...req.body,
