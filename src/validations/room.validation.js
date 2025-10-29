@@ -211,42 +211,49 @@ const updateRoomCoordinates = async (req, res, next) => {
 
 const searchValidate = async (req, res, next) => {
   const searchRule = Joi.object({
-    name: Joi.string().min(3).messages({
+    name: Joi.string().min(2).optional().messages({
       'string.base': 'name must be a string',
-      'string.min': 'name must be at least 3 characters long'
-    }).optional(),
-    amenity: Joi.string().pattern(OBJECT_ID_RULE).messages({
-      'string.base': 'amenity must be a string',
-      'string.pattern.base': OBJECT_ID_RULE_MESSAGE
-    }).optional(),
-    address: Joi.string().min(5).messages({
-      'string.base': 'address must be a string',
-      'string.min': 'address must be at least 5 characters long'
-    }).optional(),
-    avgRating: Joi.number().min(0).max(5).messages({
+      'string.min': 'name must be at least 2 characters long'
+    }),
+
+    amenity: Joi.string().optional().messages({
+      'string.base': 'amenity must be a string'
+    }),
+
+    address: Joi.string().allow('').optional().messages({
+      'string.base': 'address must be a string'
+    }),
+
+    district: Joi.string().allow('').optional().messages({
+      'string.base': 'district must be a string'
+    }),
+
+    ward: Joi.string().allow('').optional().messages({
+      'string.base': 'ward must be a string'
+    }),
+
+    minPrice: Joi.number().min(0).optional().messages({
+      'number.base': 'minPrice must be a number',
+      'number.min': 'minPrice must be at least 0'
+    }),
+
+    maxPrice: Joi.number().min(0).optional().messages({
+      'number.base': 'maxPrice must be a number',
+      'number.min': 'maxPrice must be at least 0'
+    }),
+
+    avgRating: Joi.number().min(0).max(5).optional().messages({
       'number.base': 'avgRating must be a number',
       'number.min': 'avgRating must be at least 0',
       'number.max': 'avgRating must be at most 5'
-    }).optional(),
-    totalRatings: Joi.number().integer().min(0).messages({
+    }),
+
+    totalRatings: Joi.number().integer().min(0).optional().messages({
       'number.base': 'totalRatings must be a number',
       'number.integer': 'totalRatings must be an integer',
       'number.min': 'totalRatings must be at least 0'
-    }).optional(),
-    ward: Joi.string().min(2).messages({
-      'string.base': 'ward must be a string',
-      'string.min': 'ward must be at least 2 characters long'
-    }).optional(),
-    priceMin: Joi.number().min(0).optional(),
-    priceMax: Joi.number().min(0).optional()
-  })
-  try {
-    const data = req?.query ? req.query : {}
-    await searchRule.validateAsync(data, { abortEarly: false })
-    next()
-  } catch (error) {
-    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
-  }
+    }),
+  });
 }
 
 const nearbyRooms = async (req, res, next) => {

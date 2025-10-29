@@ -269,27 +269,31 @@ const getMyProfile = async (userId) => {
   try {
     const user = await UserModel.findById(userId)
       .select('-password -__v')
-      .populate('favorites', 'name address avgRating totalRatings')
-      .populate('sharedRooms', 'title content status')
+      .populate({
+        path: 'favorites',
+        select: 'name slug address price images videos avgRating totalRatings'
+      })
+      .populate('sharedRooms', 'title content status');
 
     if (!user || !['tenant', 'host'].includes(user.role) || user._destroyed) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
     }
     if (user.banned) {
-      throw new ApiError(StatusCodes.FORBIDDEN, 'This account has been banned')
+      throw new ApiError(StatusCodes.FORBIDDEN, 'This account has been banned');
     }
 
     const reviews = await ReviewModel.find({ user: userId })
       .populate('room', 'name address avgRating totalRatings')
-      .select('rating comment createdAt updatedAt')
+      .select('rating comment createdAt updatedAt');
 
-    // Nếu là host thì lấy danh sách phòng họ tạo
-    let myRooms = []
+    let myRooms = [];
     if (user.role === 'host') {
       myRooms = await RoomModel.find({ createdBy: userId, isDeleted: false })
         .populate('amenities', 'name')
         .populate('ward', 'name')
-        .select('name slug description price amenities address ward images videos avgRating status availability createdAt updatedAt')
+        .select(
+          'name slug description price amenities address ward images videos avgRating status availability createdAt updatedAt'
+        );
     }
 
     return {
@@ -303,14 +307,15 @@ const getMyProfile = async (userId) => {
       favorites: user.favorites || [],
       sharedRooms: user.sharedRooms || [],
       reviews: reviews || [],
-      myRooms, 
+      myRooms,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
-    }
+    };
   } catch (error) {
-    throw error
+    throw error;
   }
-}
+};
+
 
 const getPublicProfile = async (userId) => {
   try {
