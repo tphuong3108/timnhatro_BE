@@ -628,30 +628,54 @@ const searchRooms = async (filterCriteria) => {
 const getNearbyRooms = async (queryParams) => {
   try {
     const { latitude, longitude, distance } = queryParams;
-    const rooms = await RoomModel.find({
-      location: {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [parseFloat(longitude), parseFloat(latitude)]
+
+    const rooms = await RoomModel.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
           },
-          $maxDistance: parseInt(distance)
-        }
+          distanceField: "distance",
+          spherical: true,
+          maxDistance: parseInt(distance),
+        },
       },
-      status: 'approved'
-    })
-      .populate({
-        path: 'amenities',
-        select: 'name icon'
-      })
-      .select('name slug address avgRating images location')
-      .limit(20);
+      {
+        $match: { status: "approved" },
+      },
+      {
+        $lookup: {
+          from: "amenities",
+          localField: "amenities",
+          foreignField: "_id",
+          as: "amenities",
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          slug: 1,
+          address: 1,
+          avgRating: 1,
+          totalRatings: 1,
+          totalLikes: 1, 
+          viewCount: 1,   
+          images: 1,
+          location: 1,
+          distance: 1,  
+          amenities: { name: 1, icon: 1 },
+        },
+      },
+      { $limit: 20 },
+    ]);
 
     return rooms;
   } catch (error) {
     throw error;
   }
-}
+};
+
 const getHotRooms = async () => {
   try {
     const now = new Date()
@@ -681,9 +705,11 @@ const getHotRooms = async () => {
           roomId: '$_id',
           name: '$name',
           address: '$address',
+          slug: '$slug',
           image: { $arrayElemAt: ['$images', 0] },
           avgRating: 1,
           favoriteCount: 1,
+          viewCount: 1,
           totalLikes: 1
         }
       }
