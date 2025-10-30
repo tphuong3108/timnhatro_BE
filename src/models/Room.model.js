@@ -89,6 +89,10 @@ const roomSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  viewCount: {
+    type: Number,
+    default: 0
+  },
   likeBy: {
     type: [{
       type: mongoose.Schema.Types.ObjectId,
@@ -98,9 +102,36 @@ const roomSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'hidden'],
+    enum: ['pending', 'approved', 'hidden', 'rejected'],
     default: 'pending'
   },
+  availability: {
+    type: String,
+    enum: ['available', 'unavailable'],
+    default: 'available'
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  reports: [
+    {
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users',
+        required: true,
+      },
+      reason: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      reportedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'users',

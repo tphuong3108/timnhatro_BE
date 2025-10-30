@@ -1,33 +1,67 @@
 import { StatusCodes } from 'http-status-codes'
 import { userService } from '~/services/user.service.js'
+import UserModel from '~/models/User.model.js'
 
 //role: tenant(Người tìm trọ), host(Chủ trọ), admin(Quản trị viên)
+
 const register = async (req, res, next) => {
   try {
-    const newUser = await userService.register(req.body)
+    const result = await userService.register(req.body)
 
     res.status(StatusCodes.CREATED).json({
       success: true,
-      message: 'Đăng ký thành công',
-      user: {
-        userId: newUser._id,
-        email: newUser.email,
-        fullName: newUser.firstName + ' ' + newUser.lastName
-      }
+      message: result.message
     })
   } catch (error) {
     next(error)
   }
 }
 
+const verifyEmail = async (req, res, next) => {
+  try {
+    const result = await userService.verifyEmail(req.body);
+    res.status(StatusCodes.OK).json({ 
+      success: true, 
+      message: result.message 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const sendPasswordResetOTP = async (req, res, next) => {
+  try {
+    const result = await userService.sendPasswordResetOTP(req.body.email);
+    res.status(StatusCodes.OK).json({ 
+      success: true, 
+      message: result.message 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const login = async (req, res, next) => {
   try {
-    const { userData, accessToken, refreshToken } = await userService.login({ ...req.body, ipAddress: req.ip, device: req.headers['user-agent'] })
+    const { userData, accessToken, refreshToken } = await userService.login({
+      ...req.body,
+      ipAddress: req.ip,
+      device: req.headers['user-agent']
+    })
+
+    let updatedUser = null
+    if (userData && userData.userId) {
+      updatedUser = await UserModel.findByIdAndUpdate(
+        userData.userId,
+        { $inc: { loginCount: 1 } },
+        { new: true } 
+      ).select('firstName lastName email avatar role loginCount')
+    }
 
     res.status(StatusCodes.OK).json({
       success: true,
       message: 'Đăng nhập thành công',
-      user: userData,
+      user: updatedUser || userData,
       accessToken,
       refreshToken
     })
@@ -35,6 +69,7 @@ const login = async (req, res, next) => {
     next(error)
   }
 }
+
 
 const logout = async (req, res, next) => {
   try {
@@ -64,7 +99,11 @@ const requestToken = async (req, res, next) => {
 
 const getAllUsers = async (req, res, next) => {
   try {
-    const users = await userService.getAllUsers()
+    // Lấy role từ query: ?role=host hoặc ?role=host,tenant
+    const { role } = req.query
+    const roles = role ? role.split(',') : []
+
+    const users = await userService.getAllUsers(roles)
     res.status(StatusCodes.OK).json(users)
   } catch (error) {
     next(error)
@@ -79,37 +118,6 @@ const changePassword = async (req, res, next) => {
     res.status(StatusCodes.OK).json({
       success: true,
       message: 'Đổi mật khẩu thành công'
-    })
-  } catch (error) {
-    next(error)
-  }
-}
-
-const sendOTP = async (req, res, next) => {
-  try {
-    await userService.sendOTP(req.body)
-    res.status(StatusCodes.OK).json({ message: 'OTP sent to email' })
-  } catch (error) {
-    next(error)
-  }
-}
-
-const verifyOTP = async (req, res, next) => {
-  try {
-    await userService.verifyOTP(req.body)
-    res.status(StatusCodes.OK).json({ message: 'OTP verified successfully' })
-  } catch (error) {
-    next(error)
-  }
-}
-
-const getProfile = async (req, res, next) => {
-  try {
-    const userId = req?.query?.userId || req.user.id
-    const profile = await userService.getUserProfile(userId)
-    res.status(StatusCodes.OK).json({
-      success: true,
-      user: profile
     })
   } catch (error) {
     next(error)
@@ -131,27 +139,47 @@ const getUserDetails = async (req, res, next) => {
 
 const banUser = async (req, res, next) => {
   try {
-    const userId = req.params.id
-    await userService.banUser(userId)
+    const userId = req.params.id;
+    const currentUser = req.user;
+
+    const result = await userService.banUser(userId, currentUser);
+
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'User has been banned successfully'
-    })
+      message: result.message
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
 }
 
-const destroyUser = async (req, res, next) => {
+const banSelf = async (req, res, next) => {
   try {
-    const userId = req.params.id
-    await userService.destroyUser(userId)
+    const userId = req.user.id; 
+    await userService.banSelf(userId);
+
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'User has been deleted successfully'
-    })
+      message: 'Tài khoản của bạn đã bị khóa thành công'
+    });
   } catch (error) {
-    next(error)
+    next(error);
+  }
+};
+
+const destroyUser = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const currentUser = req.user;
+
+    const result = await userService.destroyUser(userId, currentUser);
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    next(error);
   }
 }
 
@@ -181,6 +209,24 @@ const updateUserLocation = async (req, res, next) => {
   }
 };
 
+const oAuthLoginCallback = async (req, res, next) => {
+  try {
+    const { accessToken, refreshToken } = await userService.handleOAuthLogin(
+      req.user,
+      req.ip,
+      req.headers['user-agent']
+    )
+
+    // Chuyển hướng đến CLIENT_URL với tokens dưới dạng query params
+    const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}?accessToken=${accessToken}&refreshToken=${refreshToken}`
+    res.redirect(redirectUrl)
+  } catch (error) {
+    // Nếu có lỗi, chuyển hướng đến trang lỗi đăng nhập trên client
+    const failureRedirectUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/login-failure`
+    res.redirect(failureRedirectUrl)
+  }
+}
+
 export const userController = {
   register,
   login,
@@ -190,10 +236,11 @@ export const userController = {
   getAllUsers,
   getUserDetails,
   changePassword,
-  sendOTP,
-  verifyOTP,
-  getProfile,
+  verifyEmail,
+  sendPasswordResetOTP,
   banUser,
+  banSelf,
   destroyUser,
-  updateUserLocation
+  updateUserLocation,
+  oAuthLoginCallback
 }

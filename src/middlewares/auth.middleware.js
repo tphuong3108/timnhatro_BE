@@ -15,9 +15,36 @@ export const verifyToken = async (req, res, next) => {
   }
 }
 
+// Chỉ admin
 export const verifyAdmin = (req, res, next) => {
   if (!req.user || !req.user.role || req.user.role !== 'admin') {
     return next(new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền truy cập'))
   }
   next()
+}
+
+// Chỉ host
+export const verifyHost = (req, res, next) => {
+  if (!req.user || req.user.role !== 'host') {
+    return next(new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền truy cập'))
+  }
+  next()
+}
+
+// Chỉ tenant
+export const verifyTenant = (req, res, next) => {
+  if (!req.user || req.user.role !== 'tenant') {
+    return next(new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền truy cập'))
+  }
+  next()
+}
+
+// truyền role nào được phép 
+export const verifyRoles = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return next(new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền truy cập'))
+    }
+    next()
+  }
 }

@@ -5,6 +5,7 @@ const createNew = async (req, res, next) => {
   try {
     const newAmenity = await amenityService.createNew(req.body)
     res.status(StatusCodes.CREATED).json({
+      success: true,
       message: 'Amenity created successfully',
       data: newAmenity
     })
@@ -15,8 +16,9 @@ const createNew = async (req, res, next) => {
 
 const getAllAmenities = async (req, res, next) => {
   try {
-    const amenities = await amenityService.getAllAmenities(req.query)
+    const amenities = await amenityService.getAllAmenities()
     res.status(StatusCodes.OK).json({
+      success: true,
       message: 'Amenities retrieved successfully',
       data: amenities
     })
@@ -30,6 +32,7 @@ const updateAmenity = async (req, res, next) => {
     const amenityId = req.params.id
     const updatedAmenity = await amenityService.updateAmenity(amenityId, req.body)
     res.status(StatusCodes.OK).json({
+      success: true,
       message: 'Amenity updated successfully',
       data: updatedAmenity
     })
@@ -43,7 +46,8 @@ const deleteAmenity = async (req, res, next) => {
     const amenityId = req.params.id
     const deletedAmenity = await amenityService.deleteAmenity(amenityId)
     res.status(StatusCodes.OK).json({
-      message: 'Amenity deleted successfully',
+      success: true,
+      message: 'Amenity soft-deleted successfully',
       data: deletedAmenity
     })
   } catch (error) {

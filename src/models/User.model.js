@@ -6,14 +6,14 @@ import LoginLogModel from './LoginLog.model'
 const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: true,
+    required: function() { return this.provider === 'local'; },
     trim: true,
     minlength: 1,
     maxlength: 50
   },
   lastName: {
     type: String,
-    required: true,
+    required: function() { return this.provider === 'local'; },
     trim: true,
     minlength: 1,
     maxlength: 50
@@ -31,8 +31,9 @@ const userSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: true,
+    required: function() { return this.provider === 'local'; },
     unique: true,
+    sparse: true,
     trim: true,
     validate: {
       validator: (v) => PHONE_RULE.test(v),
@@ -45,7 +46,7 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: function() { return this.provider === 'local'; },
     minlength: 6
   },
   avatar: {
@@ -60,16 +61,20 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
+    enum: ['tenant', 'host', 'admin'],
+    default: 'tenant'
   },
   favorites: {
     type: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'places'
+      ref: 'rooms'
     }],
     required: true,
     default: []
+  },
+  loginCount: {
+    type: Number,
+    default: 0
   },
   currentLocation: {
     type: {
@@ -82,12 +87,8 @@ const userSchema = new mongoose.Schema({
       default: [0, 0]
     }
   },
-  points: {
-    type: Number,
-    default: 0
-  },
-  sharedBlogs: [{
-    blog: { type: mongoose.Schema.Types.ObjectId, ref: 'blogs' },
+  sharedRooms: [{
+    room: { type: mongoose.Schema.Types.ObjectId, ref: 'rooms' },
     sharedAt: { type: Date, default: Date.now }
   }],
   banned: {
@@ -97,6 +98,22 @@ const userSchema = new mongoose.Schema({
   _destroyed: {
     type: Boolean,
     default: false
+  },
+  facebookId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  displayName: String,
+  provider: {
+    type: String,
+    enum: ['local', 'facebook', 'google'],
+    default: 'local'
   },
   createdAt: {
     type: Date,
@@ -124,11 +141,16 @@ userSchema.methods.saveLog = async function (ipAddress, device) {
 }
 
 userSchema.pre('save', async function (next) {
-  if (this.isModified('password')) {
+  if (!this.isModified('password')) {
+    return next()
+  }
+  try {
     const salt = await bcrypt.genSalt(10)
     this.password = await bcrypt.hash(this.password, salt)
+    next()
+  } catch (error) {
+    next(error)
   }
-  next()
 })
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
