@@ -339,6 +339,7 @@ const getRoomsByWard = async (req, res, next) => {
   }
 }
 
+
 export const roomController = {
   createNew,
   getAllRooms,
@@ -362,5 +363,5 @@ export const roomController = {
   getNearbyRooms,
   getHotRooms,
   reportRoom,
-  getRoomsByWard
+  getRoomsByWard,
 }

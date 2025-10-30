@@ -40,4 +40,5 @@ Router.post('/:id/report', verifyToken, verifyRoles('tenant', 'host'), generalVa
 // Lấy phòng theo phường/xã
 Router.get('/ward/:wardId', roomController.getRoomsByWard)
 
+
 export const roomRoute = Router

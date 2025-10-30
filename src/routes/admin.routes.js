@@ -31,6 +31,8 @@ Router.get('/stats/logins', verifyToken, verifyAdmin, adminController.getLoginSt
 Router.get('/stats/monthlyUsers', verifyToken, verifyAdmin, adminController.getUserMonthlyStats)
 Router.get('/stats/topHosts', verifyToken, verifyAdmin, adminController.getTopHosts)
 Router.get('/stats/reports', verifyToken, verifyAdmin, adminController.getReportStats)
+Router.get('/stats/top-amenities', verifyToken, verifyAdmin, adminController.getTopAmenities)
+Router.get('/stats/top-wards', verifyToken, verifyAdmin, adminController.getTopWards)
 Router.post('/stats/processReports', verifyToken, verifyAdmin, adminController.processReports)
 
 Router.post('/rooms', verifyToken, verifyAdmin, upload.fields([{ name: 'images' }, { name: 'videos' }]), roomValidation.createNew, roomController.createNew)

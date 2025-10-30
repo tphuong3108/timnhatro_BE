@@ -58,38 +58,30 @@ const createNew = async (req, res, next) => {
       ).length(2).required()
     }).required(),
     images: Joi.array().items(
-      Joi.string().messages({
-        'string.base': 'each image must be a string'
+      Joi.string().uri().messages({
+        'string.base': 'each image must be a string',
+        'string.uri': 'each image must be a valid URL'
       })
-    ).optional().default([]).messages({
-      'array.base': 'images must be an array of strings'
+    ).min(1).required().messages({
+      'array.base': 'images must be an array of strings',
+      'array.min': 'at least 1 image is required'
     }),
     videos: Joi.array().items(
       Joi.string().messages({
         'string.base': 'each video must be a string'
       })
-    ).optional().default([]),
+    ).optional(),
   })
   try {
-    // Nếu có file upload thì copy path vào req.body.images/videos để Joi không báo lỗi
-    if (req.files?.images?.length) {
-      req.body.images = req.files.images.map(f => f.path || f.secure_url || f.location || '')
-    }
-    if (req.files?.videos?.length) {
-      req.body.videos = req.files.videos.map(f => f.path || f.secure_url || f.location || '')
-    }
-
-    // Parse JSON string nếu client gửi dạng multipart
-    if (typeof req.body.location === 'string') {
-      try { req.body.location = JSON.parse(req.body.location) } catch {}
-    }
-    if (typeof req.body.amenities === 'string') {
-      try { req.body.amenities = JSON.parse(req.body.amenities) } catch {}
-    }
-    if (typeof req.body.images === 'string') {
-      try { req.body.images = JSON.parse(req.body.images) } catch {}
-    }
-
+    // if (req.body.location && typeof req.body.location === 'string') {
+    //   req.body.location = JSON.parse(req.body.location)
+    // }
+    // if (req.body.amenities && typeof req.body.amenities === 'string') {
+    //   req.body.amenities = JSON.parse(req.body.amenities)
+    // }
+    // if (req.body.ward && typeof req.body.ward === 'string') {
+    //   req.body.ward = JSON.parse(req.body.ward)[0]
+    // }
     const data = req?.body ? req.body : {}
     await validationRule.validateAsync(data, { abortEarly: false })
     next()
@@ -139,10 +131,12 @@ const updateRoomValidate = async (req, res, next) => {
     }).optional(),
 
     images: Joi.array().items(
-      Joi.string().messages({
-        'string.base': 'each image must be a string'
+      Joi.string().uri().messages({
+        'string.uri': 'each image must be a valid URL'
       })
-    ).optional().default([]),
+    ).min(1).messages({
+      'array.base': 'images must be an array of strings'
+    }).optional(),
 
     videos: Joi.array().items(
       Joi.string().messages({
@@ -211,49 +205,42 @@ const updateRoomCoordinates = async (req, res, next) => {
 
 const searchValidate = async (req, res, next) => {
   const searchRule = Joi.object({
-    name: Joi.string().min(2).optional().messages({
+    name: Joi.string().min(3).messages({
       'string.base': 'name must be a string',
-      'string.min': 'name must be at least 2 characters long'
-    }),
-
-    amenity: Joi.string().optional().messages({
-      'string.base': 'amenity must be a string'
-    }),
-
-    address: Joi.string().allow('').optional().messages({
-      'string.base': 'address must be a string'
-    }),
-
-    district: Joi.string().allow('').optional().messages({
-      'string.base': 'district must be a string'
-    }),
-
-    ward: Joi.string().allow('').optional().messages({
-      'string.base': 'ward must be a string'
-    }),
-
-    minPrice: Joi.number().min(0).optional().messages({
-      'number.base': 'minPrice must be a number',
-      'number.min': 'minPrice must be at least 0'
-    }),
-
-    maxPrice: Joi.number().min(0).optional().messages({
-      'number.base': 'maxPrice must be a number',
-      'number.min': 'maxPrice must be at least 0'
-    }),
-
-    avgRating: Joi.number().min(0).max(5).optional().messages({
+      'string.min': 'name must be at least 3 characters long'
+    }).optional(),
+    amenity: Joi.string().pattern(OBJECT_ID_RULE).messages({
+      'string.base': 'amenity must be a string',
+      'string.pattern.base': OBJECT_ID_RULE_MESSAGE
+    }).optional(),
+    address: Joi.string().min(5).messages({
+      'string.base': 'address must be a string',
+      'string.min': 'address must be at least 5 characters long'
+    }).optional(),
+    avgRating: Joi.number().min(0).max(5).messages({
       'number.base': 'avgRating must be a number',
       'number.min': 'avgRating must be at least 0',
       'number.max': 'avgRating must be at most 5'
-    }),
-
-    totalRatings: Joi.number().integer().min(0).optional().messages({
+    }).optional(),
+    totalRatings: Joi.number().integer().min(0).messages({
       'number.base': 'totalRatings must be a number',
       'number.integer': 'totalRatings must be an integer',
       'number.min': 'totalRatings must be at least 0'
-    }),
-  });
+    }).optional(),
+    ward: Joi.string().min(2).messages({
+      'string.base': 'ward must be a string',
+      'string.min': 'ward must be at least 2 characters long'
+    }).optional(),
+    priceMin: Joi.number().min(0).optional(),
+    priceMax: Joi.number().min(0).optional()
+  })
+  try {
+    const data = req?.query ? req.query : {}
+    await searchRule.validateAsync(data, { abortEarly: false })
+    next()
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
+  }
 }
 
 const nearbyRooms = async (req, res, next) => {

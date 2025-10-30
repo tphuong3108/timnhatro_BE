@@ -130,7 +130,7 @@ const getPopularStats = async () => {
     const popularRooms = await RoomModel.find({ status: 'approved' })
       .sort({ avgRating: -1, totalRatings: -1, totalLikes: -1 })
       .limit(5)
-      .select('name avgRating totalRatings totalLikes viewCount')
+      .select('name slug images price avgRating totalRatings totalLikes viewCount')
 
     return {
       popularRooms
@@ -177,7 +177,7 @@ const getTopViewedRooms = async () => {
     const topRooms = await RoomModel.find({ status: 'approved' })
       .sort({ viewCount: -1 })
       .limit(6)
-      .select('name address images avgRating viewCount');
+      .select('name slug address images price avgRating totalRatings totalLikes viewCount');
     return topRooms
   } catch (error) {
     throw error
@@ -294,42 +294,191 @@ const getTopHosts = async () => {
 
 const getReportsStats = async () => {
   try {
-    // ===== Thống kê báo cáo phòng =====
     const reportedRooms = await RoomModel.aggregate([
-      { $match: { 'reports.0': { $exists: true } } }, // chỉ lấy phòng có report
-      { $unwind: "$reports" }, // tách từng report
+      { $match: { "reports.0": { $exists: true } } },
+      { $unwind: "$reports" },
+
+      {
+        $lookup: {
+          from: "users",
+          localField: "reports.userId",
+          foreignField: "_id",
+          as: "reportUser",
+        },
+      },
+      { $unwind: { path: "$reportUser", preserveNullAndEmptyArrays: true } },
+
+      // Join chủ trọ
+      {
+        $lookup: {
+          from: "users",
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "hostInfo",
+        },
+      },
+      { $unwind: { path: "$hostInfo", preserveNullAndEmptyArrays: true } },
+
       {
         $group: {
           _id: "$_id",
           name: { $first: "$name" },
+          slug: { $first: "$slug" },
+          address: { $first: "$address" },
+          images: { $first: "$images" },
+          avgRating: { $first: "$avgRating" },
+          totalLikes: { $first: "$totalLikes" },
+          totalRatings: { $first: "$totalRatings" },
+          hostName: {
+            $first: {
+              $ifNull: [
+                "$hostInfo.fullName",
+                { $concat: ["$hostInfo.firstName", " ", "$hostInfo.lastName"] },
+              ],
+            },
+          },
+          hostAvatar: { $first: "$hostInfo.avatar" },
           totalReports: { $sum: 1 },
-          reports: { $push: "$reports" }
-        }
+          reports: {
+            $push: {
+              reason: "$reports.reason",
+              reportedAt: "$reports.reportedAt",
+              reporterName: {
+                $ifNull: [
+                  "$reportUser.fullName",
+                  {
+                    $concat: [
+                      "$reportUser.firstName",
+                      " ",
+                      "$reportUser.lastName",
+                    ],
+                  },
+                ],
+              },
+              reporterAvatar: "$reportUser.avatar",
+              reporterEmail: "$reportUser.email",
+            },
+          },
+        },
       },
-      { $sort: { totalReports: -1 } } // sắp xếp theo số report giảm dần
+      { $sort: { totalReports: -1 } },
     ]);
 
-    // ===== Thống kê báo cáo review =====
+    //  Báo cáo đánh giá 
     const reportedReviews = await ReviewModel.aggregate([
-      { $match: { 'reports.0': { $exists: true } } }, // chỉ lấy review có report
+      { $match: { "reports.0": { $exists: true } } },
       { $unwind: "$reports" },
+
+      // Join người báo cáo
+      {
+        $lookup: {
+          from: "users",
+          localField: "reports.userId",
+          foreignField: "_id",
+          as: "reportUser",
+        },
+      },
+      { $unwind: { path: "$reportUser", preserveNullAndEmptyArrays: true } },
+
+      // Join người viết review
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "reviewerInfo",
+        },
+      },
+      { $unwind: { path: "$reviewerInfo", preserveNullAndEmptyArrays: true } },
+
+      // Join phòng chứa review
+      {
+        $lookup: {
+          from: "rooms",
+          localField: "roomId",
+          foreignField: "_id",
+          as: "roomInfo",
+        },
+      },
+      { $unwind: { path: "$roomInfo", preserveNullAndEmptyArrays: true } },
+
+      // Join chủ trọ
+      {
+        $lookup: {
+          from: "users",
+          localField: "roomInfo.createdBy",
+          foreignField: "_id",
+          as: "hostInfo",
+        },
+      },
+      { $unwind: { path: "$hostInfo", preserveNullAndEmptyArrays: true } },
+
       {
         $group: {
           _id: "$_id",
           roomId: { $first: "$roomId" },
+          roomSlug: { $first: "$roomInfo.slug" },
+          roomName: { $first: "$roomInfo.name" },
           comment: { $first: "$comment" },
+          avgRating: { $first: "$roomInfo.avgRating" },
           totalReports: { $sum: 1 },
-          reports: { $push: "$reports" }
-        }
+          reviewerName: {
+            $first: {
+              $ifNull: [
+                "$reviewerInfo.fullName",
+                {
+                  $concat: [
+                    "$reviewerInfo.firstName",
+                    " ",
+                    "$reviewerInfo.lastName",
+                  ],
+                },
+              ],
+            },
+          },
+          reviewerAvatar: { $first: "$reviewerInfo.avatar" },
+          hostName: {
+            $first: {
+              $ifNull: [
+                "$hostInfo.fullName",
+                {
+                  $concat: ["$hostInfo.firstName", " ", "$hostInfo.lastName"],
+                },
+              ],
+            },
+          },
+          hostAvatar: { $first: "$hostInfo.avatar" },
+          reports: {
+            $push: {
+              reason: "$reports.reason",
+              reportedAt: "$reports.reportedAt",
+              reporterName: {
+                $ifNull: [
+                  "$reportUser.fullName",
+                  {
+                    $concat: [
+                      "$reportUser.firstName",
+                      " ",
+                      "$reportUser.lastName",
+                    ],
+                  },
+                ],
+              },
+              reporterAvatar: "$reportUser.avatar",
+              reporterEmail: "$reportUser.email",
+            },
+          },
+        },
       },
-      { $sort: { totalReports: -1 } }
+      { $sort: { totalReports: -1 } },
     ]);
 
     return { reportedRooms, reportedReviews };
   } catch (error) {
     throw error;
   }
-}
+};
+
 
 const handleReports = async () => {
   try {
@@ -363,7 +512,19 @@ const handleReports = async () => {
 
     // ===== Review =====
     const reportedReviews = await ReviewModel.aggregate([
-      { $unwind: "$reports" },
+    { $match: { "reports.0": { $exists: true } } },
+    { $unwind: "$reports" },
+    {
+      $addFields: {
+        roomId: {
+          $cond: [
+            { $eq: [{ $type: "$roomId" }, "string"] },
+            { $toObjectId: "$roomId" },
+            "$roomId"
+          ]
+        }
+      }
+    },
       { $group: { 
           _id: "$_id", 
           userId: { $first: "$userId" }, 
@@ -400,6 +561,84 @@ const handleReports = async () => {
   }
 }
 
+const getTopAmenities = async () => {
+  try {
+    const topAmenities = await RoomModel.aggregate([
+      { $match: { status: 'approved' } },
+      { $unwind: '$amenities' },
+      {
+        $group: {
+          _id: '$amenities',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'amenities',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'amenity'
+        }
+      },
+      { $unwind: '$amenity' },
+      {
+        $project: {
+          _id: 0,
+          id: '$_id',
+          name: '$amenity.name',
+          icon: '$amenity.icon',
+          usageCount: '$count'
+        }
+      }
+    ])
+
+    return topAmenities
+  } catch (error) {
+    throw error
+  }
+}
+
+
+const getTopWards = async () => {
+  try {
+    const topWards = await RoomModel.aggregate([
+      { $match: { status: 'approved', isDeleted: false } },
+      {
+        $group: {
+          _id: '$ward',
+          totalRooms: { $sum: 1 }
+        }
+      },
+      { $sort: { totalRooms: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'wards',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'wardInfo'
+        }
+      },
+      { $unwind: '$wardInfo' },
+      {
+        $project: {
+          _id: 0,
+          wardId: '$wardInfo._id',
+          wardName: '$wardInfo.name',
+          totalRooms: 1
+        }
+      }
+    ])
+
+    return topWards
+  } catch (error) {
+    throw error
+  }
+}
+
+
 export const adminService = {
   getMe,
   getOverviewStats,
@@ -413,5 +652,8 @@ export const adminService = {
   getUserMonthlyStats,
   getTopHosts,
   getReportsStats,
-  handleReports
+  handleReports,
+  getTopAmenities,
+  getTopWards,
+  
 }

@@ -5,7 +5,6 @@ import RoomModel from '~/models/Room.model.js'
 import UserModel from '~/models/User.model.js'
 import WardModel from '~/models/Ward.model.js';
 import ReviewModel from '~/models/Review.model.js'
-import WardModel from '~/models/Ward.model.js'
 
 import { OBJECT_ID_RULE } from '~/utils/validators'
 import AmenityModel from '~/models/Amenity.model.js'
@@ -587,21 +586,16 @@ const getUserSuggestedRooms = async (userId) => {
 
 const searchRooms = async (filterCriteria) => {
   try {
-    const query = {};
-
-    if (filterCriteria.amenity) {
-      const amenities = Array.isArray(filterCriteria.amenity)
-        ? filterCriteria.amenity
-        : filterCriteria.amenity.split(',');
-      const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regexAmenities = amenities.map(a => new RegExp(escapeRegex(a.trim()), 'i'));
-      const amenityDocs = await AmenityModel.find({
-        name: { $in: regexAmenities }
-      }).select('_id');
-      if (amenityDocs.length > 0)
-        query.amenities = { $in: amenityDocs.map(a => a._id) };
+    const query = {}
+    if (filterCriteria.name) {
+      query.name = { $regex: filterCriteria.name, $options: 'i' } // Case-insensitive search
     }
-
+    if (filterCriteria.amenity) {
+      const amenity = await AmenityModel.findOne({ $or: [{ slug: filterCriteria.amenity }, { _id: filterCriteria.amenity }] }).select('_id')
+      if (amenity) {
+        query.amenities = amenity._id
+      }
+    }
     if (filterCriteria.address) {
       query.address = { $regex: filterCriteria.address, $options: 'i' } // Case-insensitive search
     }
@@ -613,31 +607,24 @@ const searchRooms = async (filterCriteria) => {
         query.ward = null
       }
     }
-
-    if (filterCriteria.minPrice || filterCriteria.maxPrice) {
-      query.price = {};
-      if (filterCriteria.minPrice)
-        query.price.$gte = parseInt(filterCriteria.minPrice);
-      if (filterCriteria.maxPrice)
-        query.price.$lte = parseInt(filterCriteria.maxPrice);
+    if (filterCriteria.avgRating) {
+      query.avgRating = { $gte: parseFloat(filterCriteria.avgRating) } // Minimum average rating
     }
-
-    const rooms = await RoomModel.find({
-      ...query,
-      status: 'approved',
-      isDeleted: false
-    })
-      .populate({ path: 'amenities', select: 'name icon' })
-      .populate({ path: 'ward', select: 'name' })
-      .select('name slug address price avgRating totalRatings amenities location images')
-      .limit(50);
-
-    return rooms;
+    if (filterCriteria.totalRatings) {
+      query.totalRatings = { $gte: parseInt(filterCriteria.totalRatings) } // Minimum total ratings
+    }
+    const rooms = await RoomModel.find({ ...query, status: 'approved' })
+      .populate({
+        path: 'amenities',
+        select: 'name icon'
+      })
+      .select('name slug address avgRating totalRatings amenities location images')
+      .limit(50) // Limit results for performance
+    return rooms
   } catch (error) {
-    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message);
+    throw error
   }
-};
-
+}
 const getNearbyRooms = async (queryParams) => {
   try {
     const { latitude, longitude, distance } = queryParams;
@@ -789,6 +776,6 @@ export const roomService = {
   getNearbyRooms,
   getHotRooms,
   reportRoom,
-  getRoomsByWard
+  getRoomsByWard,
 }
 
