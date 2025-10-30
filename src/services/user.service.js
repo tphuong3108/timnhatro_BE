@@ -211,12 +211,86 @@ const revokeRefreshToken = async (userId) => {
 const getAllUsers = async (roles = []) => {
   try {
     // Nếu truyền roles thì lọc theo roles, không thì lấy host + tenant mặc định
-    const filter = roles.length
+    const baseFilter = roles.length
       ? { role: { $in: roles } }
       : { role: { $in: ['host', 'tenant'] } }
+    
+    const filter = { ...baseFilter, _destroyed: { $ne: true } }
 
     const users = await UserModel.find(filter).select('-password')
     return users
+  } catch (error) {
+    throw error
+  }
+}
+
+const getUserDetails = async (userId) => {
+  try {
+    const user = await UserModel.findById(userId)
+      .select('-password -__v')
+      .populate('favorites', 'name address avgRating totalRatings')
+      .populate('sharedRooms', 'title content');
+
+    if (!user ||  user._destroyed) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
+    }
+    if (user.banned) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'This account has been banned')
+    }
+
+    const now = new Date()
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+
+    const rooms = await RoomModel.find({ authorId: userId }).sort({ createdAt: -1 })
+    const totalRooms = rooms.length
+    const thisMonthRooms = await RoomModel.countDocuments({
+      authorId: userId,
+      createdAt: { $gte: startOfThisMonth }
+    });
+    const lastMonthRooms = await RoomModel.countDocuments({
+      authorId: userId,
+      createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth }
+    });
+    const roomGrowth =
+      lastMonthRooms > 0
+        ? Math.round(((thisMonthRooms - lastMonthRooms) / lastMonthRooms) * 100)
+        : thisMonthRooms > 0 ? 100 : 0
+
+    const reviews = await ReviewModel.find({ userId });
+    const totalReviews = reviews.length
+    const thisMonthReviews = await ReviewModel.countDocuments({
+      userId,
+      createdAt: { $gte: startOfThisMonth }
+    });
+    const lastMonthReviews = await ReviewModel.countDocuments({
+      userId,
+      createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth }
+    });
+    const reviewGrowth =
+      lastMonthReviews > 0
+        ? Math.round(((thisMonthReviews - lastMonthReviews) / lastMonthReviews) * 100)
+        : thisMonthReviews > 0 ? 100 : 0
+
+    return {
+      userId: user._id,
+      fullName: `${user.firstName} ${user.lastName}`,
+      avatar: user.avatar || null,
+      cover: user.cover || null,
+      phone: user.phone || '',
+      email: user.email,
+      points: user.points || 0,
+      favorites: user.favorites || [],
+      sharedRooms: user.sharedRooms || [],
+
+      roomCount: totalRooms,
+      reviewCount: totalReviews,
+
+      roomGrowth,
+      reviewGrowth,
+
+      rooms
+    };
   } catch (error) {
     throw error
   }
@@ -320,17 +394,17 @@ const getMyProfile = async (userId) => {
 const getPublicProfile = async (userId) => {
   try {
     const user = await UserModel.findById(userId)
-      .select('firstName lastName avatar role bio')
+      .select('firstName lastName avatar role bio banned _destroyed')
 
-    if (!user || !['tenant', 'host'].includes(user.role) || user._destroyed) {
+    if (!user || user._destroyed === true) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
-    if (user.banned) {
+    if (user.banned === true) {
       throw new ApiError(StatusCodes.FORBIDDEN, 'This account has been banned')
     }
 
     let publicRooms = []
-    if (user.role === 'host') {
+    if (user.role === 'host' || user.role === 'admin') {
       publicRooms = await RoomModel.find({ createdBy: userId, isDeleted: false, status: 'approved' })
         .populate('amenities', 'name')
         .populate('ward', 'name')
@@ -485,6 +559,7 @@ export const userService = {
   requestToken,
   revokeRefreshToken,
   getAllUsers,
+  getUserDetails,
   changePassword,
   verifyEmail,
   sendPasswordResetOTP,
