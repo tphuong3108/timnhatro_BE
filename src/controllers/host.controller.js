@@ -98,11 +98,24 @@ const getMyReviews = async (req, res, next) => {
     next(error)
   }
 }
+const getReviewStats = async (req, res, next) => {
+  try {
+    const hostId = req.user?.id;
+    const stats = await hostService.getReviewStats(hostId);
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const hostController = {
   getMe,
   getOverviewStats,
   getDailyStats,
   getTopViewedRooms,
-  getMyReviews
+  getMyReviews,
+  getReviewStats
 }

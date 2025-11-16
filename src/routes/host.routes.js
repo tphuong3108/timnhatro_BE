@@ -10,7 +10,7 @@ import upload from '~/middlewares/cloudinary.middleware.js'
 
 const Router = express.Router()
 
-Router.post('/rooms', verifyToken, verifyHost, upload.fields([{ name: 'images' }, { name: 'videos' }]), roomValidation.createNew, roomController.createNew)
+Router.post('/rooms', upload.fields([{ name: 'images' }, { name: 'videos' }]), verifyToken, verifyHost, roomValidation.createNew, roomController.createNew)
 Router.get('/rooms/:id', verifyToken, verifyHost, generalValidation.paramIdValidate, roomController.getAdminRoomDetails)
 Router.patch('/rooms/:id', verifyToken, verifyHost, upload.fields([{ name: 'images' }, { name: 'videos' }]), generalValidation.paramIdValidate, roomController.updateRoom)
 Router.patch('/rooms/:id/availability', verifyToken, verifyHost, generalValidation.paramIdValidate, roomValidation.updateAvailability, roomController.updateAvailability)
@@ -22,5 +22,7 @@ Router.get('/stats/overview', verifyToken, verifyHost, hostController.getOvervie
 Router.get('/stats/daily', verifyToken, verifyHost, hostController.getDailyStats)
 Router.get('/stats/topViewedRooms', verifyToken, verifyHost, hostController.getTopViewedRooms)
 Router.get('/reviews', verifyToken, verifyHost, hostValidation.getMyReviews, hostController.getMyReviews)
+Router.get('/stats/reviews', verifyToken, verifyHost, hostController.getReviewStats);
+
 
 export const hostRouter = Router
