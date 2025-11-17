@@ -57,33 +57,28 @@ const createNew = async (req, res, next) => {
         Joi.number().min(-90).max(90).required()   // latitude
       ).length(2).required()
     }).required(),
-    images: Joi.array().items(
-      Joi.string().uri().messages({
-        'string.base': 'each image must be a string',
-        'string.uri': 'each image must be a valid URL'
-      })
-    ).min(1).required().messages({
-      'array.base': 'images must be an array of strings',
-      'array.min': 'at least 1 image is required'
-    }),
-    videos: Joi.array().items(
-      Joi.string().messages({
-        'string.base': 'each video must be a string'
-      })
-    ).optional(),
+    // images: Joi.array().items(
+    //   Joi.string().uri().messages({
+    //     'string.base': 'each image must be a string',
+    //     'string.uri': 'each image must be a valid URL'
+    //   })
+    // ).min(1).required().messages({
+    //   'array.base': 'images must be an array of strings',
+    //   'array.min': 'at least 1 image is required'
+    // }),
+    // videos: Joi.array().items(
+    //   Joi.string().messages({
+    //     'string.base': 'each video must be a string'
+    //   })
+    // ).optional(),
   })
   try {
-    // if (req.body.location && typeof req.body.location === 'string') {
-    //   req.body.location = JSON.parse(req.body.location)
-    // }
-    // if (req.body.amenities && typeof req.body.amenities === 'string') {
-    //   req.body.amenities = JSON.parse(req.body.amenities)
-    // }
-    // if (req.body.ward && typeof req.body.ward === 'string') {
-    //   req.body.ward = JSON.parse(req.body.ward)[0]
-    // }
     const data = req?.body ? req.body : {}
     await validationRule.validateAsync(data, { abortEarly: false })
+    // Kiểm tra images từ req.files (bắt buộc phải có ít nhất 1 file)
+    if (!req.files || !req.files.images || req.files.images.length === 0) {
+      throw new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, '"images" is required');
+    }
     next()
   } catch (error) {
     next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))

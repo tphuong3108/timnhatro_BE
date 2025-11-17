@@ -180,9 +180,6 @@ const getAllRoomsForAdmin = async (queryParams) => {
       rating: 'avgRating'
     }
 
-    const page = parseInt(queryParams.page, 10) || 1
-    const limit = parseInt(queryParams.limit, 10) || 10
-    const startIndex = (page - 1) * limit
     const sortBy = queryParams.sortBy || 'createdAt'
     const sortOrder = queryParams.sortOrder === 'desc' ? -1 : 1
 
@@ -190,27 +187,37 @@ const getAllRoomsForAdmin = async (queryParams) => {
       isDeleted: false // Admin xem tất cả trừ những cái đã bị xóa mềm
     }
 
-    const rooms = await RoomModel.find(filter)
+  let roomsQuery = RoomModel.find(filter)
       .populate({ path: 'amenities', select: 'name icon' })
       .populate({ path: 'ward', select: 'name' })
       .sort({ [sortByMapping[sortBy] || 'createdAt']: sortOrder })
-      .skip(startIndex)
-      .limit(limit)
 
-    const total = await RoomModel.countDocuments(filter)
+    let page, limit
+    let pagination = null
 
-    return {
-      rooms,
-      pagination: {
+    // client truyền page + limit thì mới phân trang
+    if (queryParams.page && queryParams.limit) {
+      page = parseInt(queryParams.page, 10)
+      limit = parseInt(queryParams.limit, 10)
+      const startIndex = (page - 1) * limit
+      roomsQuery = roomsQuery.skip(startIndex).limit(limit)
+
+      const total = await RoomModel.countDocuments(filter)
+      pagination = {
         total,
         limit,
         page,
         totalPages: Math.ceil(total / limit)
       }
     }
+
+    const rooms = await roomsQuery
+
+    return { rooms, pagination }
   } catch (error) {
     throw error
   }
+  
 }
 
 const getHostRooms = async (hostId, queryParams) => {
