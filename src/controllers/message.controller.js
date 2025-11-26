@@ -1,24 +1,36 @@
 import { messageService } from "../services/message.service.js";
+import { StatusCodes } from "http-status-codes";
 
 export const messageController = {
+  // GET /messages/:chatId
   async getMessages(req, res, next) {
     try {
       const { chatId } = req.params;
-      if (!chatId) return res.status(400).json({ success: false, message: "Thiếu chatId" });
 
-      const messages = await messageService.getMessages(chatId);
-      res.status(200).json({ success: true, data: messages });
+      const data = await messageService.getMessages(chatId);
+
+      res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) {
       next(err);
     }
   },
 
+  // POST /messages
   async sendMessage(req, res, next) {
     try {
       const senderId = req.user.id;
-      const { receiverId, content, roomId } = req.body;
-      const message = await messageService.sendMessage(senderId, receiverId, content, roomId);
-      res.status(201).json({ success: true, data: message });
+      const { chatId, content, images } = req.body;
+
+      const message = await messageService.sendMessageWithChatId({
+        chatId,
+        senderId,
+        content,
+        images,
+      });
+
+      res
+        .status(StatusCodes.CREATED)
+        .json({ success: true, data: message });
     } catch (err) {
       next(err);
     }
