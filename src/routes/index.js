@@ -9,6 +9,7 @@ import { amenityRoute } from './amenity.routes.js'
 import { reviewRouter } from './review.routes.js'
 import { chatRoute } from "./chat.route.js";
 import { messageRoute } from "./message.route.js";
+import { bookingRoom } from './booking.route.js'
 const Router = express.Router()
 
 Router.get('/status', (req, res) => {
@@ -27,4 +28,5 @@ Router.use('/amenities', amenityRoute)
 
 Router.use("/chats", chatRoute);
 Router.use("/messages", messageRoute);
+Router.use("/bookings", bookingRoom)
 export const APIs = Router
