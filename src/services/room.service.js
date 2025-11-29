@@ -180,39 +180,45 @@ const getAllRoomsForAdmin = async (queryParams) => {
       rating: 'avgRating'
     }
 
-    const page = parseInt(queryParams.page, 10) || 1
-    const limit = parseInt(queryParams.limit, 10) || 10
-    const startIndex = (page - 1) * limit
     const sortBy = queryParams.sortBy || 'createdAt'
     const sortOrder = queryParams.sortOrder === 'desc' ? -1 : 1
 
     const filter = {
-      isDeleted: false // Admin xem tất cả trừ những cái đã bị xóa mềm
+      isDeleted: false
     }
 
-    const rooms = await RoomModel.find(filter)
+  let roomsQuery = RoomModel.find(filter)
       .populate({ path: 'amenities', select: 'name icon' })
       .populate({ path: 'ward', select: 'name' })
       .sort({ [sortByMapping[sortBy] || 'createdAt']: sortOrder })
-      .skip(startIndex)
-      .limit(limit)
 
-    const total = await RoomModel.countDocuments(filter)
+    let page, limit
+    let pagination = null
 
-    return {
-      rooms,
-      pagination: {
+    // client truyền page + limit thì mới phân trang
+    if (queryParams.page && queryParams.limit) {
+      page = parseInt(queryParams.page, 10)
+      limit = parseInt(queryParams.limit, 10)
+      const startIndex = (page - 1) * limit
+      roomsQuery = roomsQuery.skip(startIndex).limit(limit)
+
+      const total = await RoomModel.countDocuments(filter)
+      pagination = {
         total,
         limit,
         page,
         totalPages: Math.ceil(total / limit)
       }
     }
+
+    const rooms = await roomsQuery
+
+    return { rooms, pagination }
   } catch (error) {
     throw error
   }
+  
 }
-
 const getHostRooms = async (hostId, queryParams) => {
   try {
     const page = parseInt(queryParams.page, 10) || 1
@@ -277,43 +283,55 @@ const getRoomDetails = async (roomId) => {
   }
 }
 
-const getRoomDetailsBySlug = async (slug) => {
+const getRoomDetailsBySlug = async (slug, userId) => {
   try {
-    const query = { slug, status: 'approved', isDeleted: false }
+    const query = { slug, status: 'approved', isDeleted: false };
 
-    const room = await RoomModel.findOneAndUpdate(
-      query,
-      { $inc: { viewCount: 1 } },
-      { new: true }
-    )
+    const room = await RoomModel.findOneAndUpdate(query, { $inc: { viewCount: 1 } }, { new: true })
       .populate({ path: 'amenities', select: 'name description' })
-      .populate({ path: 'likeBy', select: 'name avatar' })
+      .populate({ path: 'likeBy', select: 'firstName lastName avatar' })
       .populate({ path: 'ward', select: 'name' })
       .populate({ path: 'createdBy', select: 'firstName lastName fullName email avatar bio' })
       .select(
-        'name slug description price address ward location amenities avgRating totalRatings totalLikes likeBy images videos viewCount status createdBy'
-      )
+        'name slug description price address ward location amenities avgRating totalRatings totalLikes likeBy images videos viewCount status createdBy favorites'
+      );
 
     if (!room) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy phòng.')
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy phòng.');
     }
 
-    const reviews = await ReviewModel.find({
-      roomId: room._id,
-      isHidden: { $ne: true }
-    })
+    const reviews = await ReviewModel.find({ roomId: room._id, isHidden: { $ne: true } })
       .populate('userId', 'firstName lastName avatar')
       .select('comment rating createdAt')
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 });
+
+    // Truy vấn thông tin người dùng
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy người dùng.');
+    }
+
+    // Kiểm tra user đã thích chưa
+    const isLiked = userId
+      ? room.likeBy.some((u) => u._id.toString() === userId.toString())
+      : false;
+
+    // Kiểm tra user đã lưu phòng vào danh sách yêu thích chưa
+    const isFavorited = userId
+      ? room.favorites.some((fav) => fav.equals(userId))
+      : false;
 
     return {
       ...room.toObject(),
-      reviews
-    }
+      reviews,
+      isLiked,
+      isFavorited,
+    };
   } catch (error) {
-    throw error
+    throw error;
   }
-}
+};
+
 
 const updateRoom = async (roomId, updateData, userId, role) => {
   try {
@@ -416,63 +434,51 @@ const likeRoom = async (roomId, userId) => {
   }
 }
 
-const addToFavorites = async (roomId, userId) => {
-  try {
-    const room = await RoomModel.findById(roomId)
-    if (!room) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy phòng')
-    }
+const addToFavorites = async (slug, userId) => {
+  const room = await RoomModel.findOne({ slug });
+  if (!room) throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy phòng');
 
-    if (room.status !== 'approved' || room.isDeleted) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Phòng này không khả dụng để thêm vào yêu thích')
-    }
+  // Lấy thông tin người dùng từ userId
+  const user = await UserModel.findById(userId);
+  if (!user) throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy người dùng');
 
-    const user = await UserModel.findById(userId)
-    if (!user) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy người dùng')
-    }
+  // Kiểm tra nếu người dùng chưa yêu thích phòng
+  const isAlreadyFavorited = room.favorites.some(favorite => favorite.equals(userId));
 
-    if (user.favorites.includes(roomId)) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Phòng đã có trong danh sách yêu thích')
-    }
+  if (!isAlreadyFavorited) {
+    // Nếu chưa, thêm phòng vào danh sách yêu thích của người dùng và phòng
+    user.favorites.push(room._id);
+    room.favorites.push(user._id);
 
-    user.favorites.push(roomId)
-    await user.save()
-
-    return user
-  } catch (error) {
-    throw error
+    await user.save();
+    await room.save();
   }
-}
 
-const removeFromFavorites = async (roomId, userId) => {
-  try {
-    const room = await RoomModel.findById(roomId)
-    if (!room) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy phòng')
-    }
+  // Trả về phòng cập nhật với danh sách yêu thích mới
+  const updatedRoom = await RoomModel.findOne({ slug })
+    .populate('favorites')
+    .select('favorites');
 
-    if (room.status !== 'approved' || room.isDeleted) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Phòng này không khả dụng để xóa khỏi yêu thích')
-    }
+  return { message: 'Đã thêm phòng vào yêu thích thành công', updatedRoom };
+};
 
-    const user = await UserModel.findById(userId)
-    if (!user) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy người dùng')
-    }
 
-    if (!user.favorites.includes(roomId)) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Phòng không có trong danh sách yêu thích')
-    }
+const removeFromFavorites = async (slug, userId) => {
+  const room = await RoomModel.findOne({ slug });
+  if (!room) throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy phòng');
 
-    user.favorites.pull(roomId)
-    await user.save()
+  const user = await UserModel.findById(userId);
+  if (!user) throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy người dùng');
 
-    return user
-  } catch (error) {
-    throw error
-  }
-}
+  user.favorites = user.favorites.filter((id) => id.toString() !== room._id.toString());
+  await user.save();
+
+  room.favorites = room.favorites.filter((id) => id.toString() !== userId.toString());
+  await room.save();
+
+  return { message: 'Đã xóa phòng khỏi yêu thích', room };
+};
+
 
 const getFavoriteRooms = async (userId) => {
   try {

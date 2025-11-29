@@ -36,9 +36,11 @@ const START_SERVER = async () => {
   app.set("io", io);
   setupChatSocket(io);
   app.use(cors());
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-  
+  app.use("/api/hosts", APIs);
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+
   app.use("/api", APIs);
   app.use(errorHandler);
 

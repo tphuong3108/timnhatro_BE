@@ -1,5 +1,6 @@
 import UserModel from '~/models/User.model.js'
 import RoomModel from '~/models/Room.model.js'
+import mongoose from "mongoose";
 import ReviewModel from '~/models/Review.model.js'
 
 /**
@@ -25,78 +26,103 @@ const getMe = async (hostId) => {
 /**
  * Tổng quan số liệu của host
  */
-const getOverviewStats = async (hostId) => {
+
+export const getOverviewStats = async (hostId) => {
   try {
-    const now = new Date()
+    const now = new Date();
 
-    const startOfThisWeek = new Date(now)
-    startOfThisWeek.setDate(now.getDate() - now.getDay() + 1)
-    startOfThisWeek.setHours(0, 0, 0, 0)
+    const startOfThisWeek = new Date(now);
+    startOfThisWeek.setDate(now.getDate() - now.getDay() + 1);
+    startOfThisWeek.setHours(0, 0, 0, 0);
 
-    const endOfThisWeek = new Date(startOfThisWeek)
-    endOfThisWeek.setDate(startOfThisWeek.getDate() + 7)
+    const endOfThisWeek = new Date(startOfThisWeek);
+    endOfThisWeek.setDate(startOfThisWeek.getDate() + 7);
 
-    const startOfLastWeek = new Date(startOfThisWeek)
-    startOfLastWeek.setDate(startOfThisWeek.getDate() - 7)
-    const endOfLastWeek = new Date(startOfThisWeek)
+    const startOfLastWeek = new Date(startOfThisWeek);
+    startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
+    const endOfLastWeek = new Date(startOfThisWeek);
 
+    // === 📈 Hàm tính % tăng trưởng ===
     const calcGrowth = (thisWeek, lastWeek) => {
-      if (lastWeek === 0) return thisWeek > 0 ? 100 : 0
-      return ((thisWeek - lastWeek) / lastWeek) * 100
-    }
+      if (lastWeek === 0) return thisWeek > 0 ? 100 : 0;
+      return ((thisWeek - lastWeek) / lastWeek) * 100;
+    };
 
-    // Chỉ tính các phòng do host này đăng
+    // === 🏠 Đếm số phòng theo thời gian ===
     const thisWeekRooms = await RoomModel.countDocuments({
-      createdBy: hostId,
-      createdAt: { $gte: startOfThisWeek, $lt: endOfThisWeek }
-    })
-    const lastWeekRooms = await RoomModel.countDocuments({
-      createdBy: hostId,
-      createdAt: { $gte: startOfLastWeek, $lt: endOfLastWeek }
-    })
+      createdBy: new mongoose.Types.ObjectId(hostId),
+      createdAt: { $gte: startOfThisWeek, $lt: endOfThisWeek },
+    });
 
+    const lastWeekRooms = await RoomModel.countDocuments({
+      createdBy: new mongoose.Types.ObjectId(hostId),
+      createdAt: { $gte: startOfLastWeek, $lt: endOfLastWeek },
+    });
+
+    // === 👁 Tổng lượt xem ===
+    const totalViewsAgg = await RoomModel.aggregate([
+      { $match: { createdBy: new mongoose.Types.ObjectId(hostId) } },
+      { $group: { _id: null, total: { $sum: "$viewCount" } } },
+    ]);
+    const totalViews = totalViewsAgg[0]?.total || 0;
+
+    // === 👁 Lượt xem trong tuần ===
     const thisWeekViewsAgg = await RoomModel.aggregate([
       {
         $match: {
-          createdBy: hostId,
-          createdAt: { $gte: startOfThisWeek, $lt: endOfThisWeek }
-        }
+          createdBy: new mongoose.Types.ObjectId(hostId),
+          updatedAt: { $gte: startOfThisWeek, $lt: endOfThisWeek },
+        },
       },
-      { $group: { _id: null, total: { $sum: '$viewCount' } } }
-    ])
+      { $group: { _id: null, total: { $sum: "$viewCount" } } },
+    ]);
+    const thisWeekViews = thisWeekViewsAgg[0]?.total || 0;
+
+    // === 👁 Lượt xem tuần trước ===
     const lastWeekViewsAgg = await RoomModel.aggregate([
       {
         $match: {
-          createdBy: hostId,
-          createdAt: { $gte: startOfLastWeek, $lt: endOfLastWeek }
-        }
+          createdBy: new mongoose.Types.ObjectId(hostId),
+          updatedAt: { $gte: startOfLastWeek, $lt: endOfLastWeek },
+        },
       },
-      { $group: { _id: null, total: { $sum: '$viewCount' } } }
-    ])
+      { $group: { _id: null, total: { $sum: "$viewCount" } } },
+    ]);
+    const lastWeekViews = lastWeekViewsAgg[0]?.total || 0;
 
-    const thisWeekViews = thisWeekViewsAgg[0]?.total || 0
-    const lastWeekViews = lastWeekViewsAgg[0]?.total || 0
+    // === 🧮 Tổng số phòng ===
+    const totalRooms = await RoomModel.countDocuments({
+      createdBy: new mongoose.Types.ObjectId(hostId),
+    });
 
-    // Tổng số phòng của host
-    const totalRooms = await RoomModel.countDocuments({ createdBy: hostId })
+    // === 💬 Tổng lượt đánh giá ===
+    const rooms = await RoomModel.find({
+      createdBy: new mongoose.Types.ObjectId(hostId),
+    }).select("_id");
 
-    // Tổng review của các phòng host này
-    const totalReviews = await ReviewModel.countDocuments({ hostId })
+    const roomIds = rooms.map((r) => r._id);
 
+    const totalReviews = await ReviewModel.countDocuments({
+      roomId: { $in: roomIds },
+    });
+
+    // === 📊 Trả kết quả tổng hợp ===
     return {
       totalRooms,
       totalReviews,
+      totalViews,
       thisWeek: {
         rooms: thisWeekRooms,
-        views: thisWeekViews
+        views: thisWeekViews,
       },
       growth: {
         rooms: calcGrowth(thisWeekRooms, lastWeekRooms),
-        views: calcGrowth(thisWeekViews, lastWeekViews)
-      }
-    }
+        views: calcGrowth(thisWeekViews, lastWeekViews),
+      },
+    };
   } catch (error) {
-    throw error
+    console.error("❌ Lỗi trong getOverviewStats:", error);
+    throw error;
   }
 }
 
@@ -173,11 +199,30 @@ const getMyReviews = async (hostId, paging = { page: 1, limit: 10 }) => {
     throw error
   }
 }
+const getReviewStats = async (hostId) => {
+  const rooms = await RoomModel.find({ createdBy: hostId }).select('_id');
+  const roomIds = rooms.map((r) => r._id);
+
+  const stats = await ReviewModel.aggregate([
+    { $match: { roomId: { $in: roomIds } } },
+    {
+      $group: {
+        _id: null,
+        totalReviews: { $sum: 1 },
+        avgRating: { $avg: '$rating' },
+      },
+    },
+  ]);
+
+  return stats[0] || { totalReviews: 0, avgRating: 0 };
+}
+
 
 export const hostService = {
   getMe,
   getOverviewStats,
   getDailyStats,
   getTopViewedRooms,
-  getMyReviews
+  getMyReviews,
+  getReviewStats
 }

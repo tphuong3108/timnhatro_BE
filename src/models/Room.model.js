@@ -76,11 +76,12 @@ const roomSchema = new mongoose.Schema({
     min: 0,
     max: 5
   },
-  favorites: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: 'Room',
-    default: [],
-  },
+  favorites: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+    },
+  ],
   totalRatings: {
     type: Number,
     default: 0
