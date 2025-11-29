@@ -1,6 +1,7 @@
 // configs/vnpay.js
+const dotenv = require('dotenv');
 import { VNPay, ignoreLogger } from "vnpay";
-
+dotenv.config();
 export const vnpay = new VNPay({
     tmnCode: process.env.VNP_TMN_CODE,
     secureSecret: process.env.VNP_HASH_SECRET,
