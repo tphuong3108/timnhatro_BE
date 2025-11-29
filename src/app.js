@@ -8,10 +8,8 @@ import os from "os";
 import { setupChatSocket } from "~/sockets/chat.socket.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import paymentRoutes from "./routes/payment.routes.js";
 const APP_PORT = env.APP_PORT || 5050;
 
-// const {VNPay, ignoreLogger, ProductCode,VnpLocale, dateFormat} = require('vnpay')
  
 
 // Lấy IP LAN tự động
@@ -40,52 +38,7 @@ const START_SERVER = async () => {
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  app.use("/payment", paymentRoutes);
-  // app.post("/api/create-qr", async (req, res) => {
-  //   try {
-  //     const vnpay = new VNPay({
-  //       tmnCode: "",
-  //       secureSecret: "",
-  //       vnpayHost: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
-  //       testMode: true,
-  //       hashAlgorithm: "SHA512",
-  //       LoggerFn: ignoreLogger,
-  //     });
-
-  //     const tomorrow = new Date();
-  //     tomorrow.setDate(tomorrow.getDate() + 1);
-  //     const amount = 50000 * 100;
-  //     const vnpayResponse = await vnpay.buildPaymentUrl({
-  //       vnp_Version: "2.1.0",       // BẮT BUỘC
-  //       vnp_Command: "pay",         // BẮT BUỘC
-  //       vnp_TmnCode: "Z9J9XGQB",       // BẮT BUỘC
-  //       vnp_Amount: amount,         // BẮT BUỘC
-  //       vnp_CurrCode: "VND",
-  //       // vnp_Amount: 50000,
-  //       vnp_IpAddr: "127.0.0.1",
-  //       vnp_TxnRef: Date.now().toString(),
-  //       vnp_OrderInfo: "Thanh toán test",
-  //       vnp_OrderType: ProductCode.Other,
-  //       vnp_ReturnUrl: "http://localhost:5050/api/check-payment-vnpay",
-  //       vnp_Locale: VnpLocale.VN,
-  //       vnp_CreateDate: dateFormat(new Date()),
-  //       vnp_ExpireDate: dateFormat(tomorrow),
-  //     });
-
-  //     return res.status(201).json(vnpayResponse);
-  //   } catch (err) {
-  //     console.error(err);
-  //     return res.status(500).json({ error: err.message });
-  //   }
-  // });
-
-  // // Route nhận kết quả thanh toán
-  // app.get("/api/check-payment-vnpay", (req, res) => {
-  //   return res.json({
-  //     message: "VNPay return data",
-  //     data: req.query,
-  //   });
-  // });
+  
   app.use("/api", APIs);
   app.use(errorHandler);
 
