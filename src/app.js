@@ -1,29 +1,62 @@
-/* eslint-disable no-console */
-import express from 'express'
-import cors from 'cors'
-import { connectDB } from '~/config/db.js'
-import { env } from '~/config/environment.js'
-import { APIs } from '~/routes/index.js'
-import { errorHandler } from '~/middlewares/error.middleware.js'
-const APP_HOST = env.APP_HOST || 'localhost'
-const APP_PORT = env.APP_PORT || 5000
+import express from "express";
+import cors from "cors";
+import { connectDB } from "~/config/db.js";
+import { env } from "~/config/environment.js";
+import { APIs } from "~/routes/index.js";
+import { errorHandler } from "~/middlewares/error.middleware.js";
+import os from "os";
+import { setupChatSocket } from "~/sockets/chat.socket.js";
+import { createServer } from "http";
+import { Server } from "socket.io";
+const APP_PORT = env.APP_PORT || 5050;
 
-const START_SERVER = async () => {
-  const app = express()
-  app.use(cors())
-  app.use(express.json())
-  app.use(express.urlencoded({ extended: true }))
-  app.use('/api', APIs)
-  app.use(errorHandler)
-  app.listen(APP_PORT, APP_HOST, () => {
-    console.log(`🚀 Server running at http://${APP_HOST}:${APP_PORT}`)
-  })
+ 
+
+// Lấy IP LAN tự động
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return "localhost";
 }
 
+const START_SERVER = async () => {
+  const app = express();
+  const httpServer = createServer(app);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: "*", // có thể cấu hình lại domain FE sau này
+    },
+  });
+  app.set("io", io);
+  setupChatSocket(io);
+  app.use(cors());
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  
+  app.use("/api", APIs);
+  app.use(errorHandler);
+
+  //  listen toàn mạng
+  httpServer.listen(APP_PORT, "0.0.0.0", () => {
+    const localIP = getLocalIP();
+    console.log("=========================================");
+    console.log(`🚀 Server đang chạy tại:`);
+    console.log(` Local:     http://localhost:${APP_PORT}`);
+    console.log(` Network:   http://${localIP}:${APP_PORT}`);
+    console.log("=========================================");
+  });
+};
+
 (async () => {
-  console.log('Connecting to database...')
-  await connectDB()
-  console.log('Database connected successfully')
-  console.log('Starting server...')
-  await START_SERVER()
-})()
+  console.log("Connecting to database...");
+  await connectDB();
+  console.log("Database connected successfully");
+  console.log("Starting server...");
+  await START_SERVER();
+})();

@@ -324,16 +324,12 @@ const updateRoom = async (roomId, updateData, userId, role) => {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Phòng này đã bị xóa, không thể chỉnh sửa')
     }
 
+    
+    if (room.createdBy.toString() !== userId.toString()) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền sửa phòng này.')
+    }
+      
     if (role === 'host') {
-      // Nếu là Host → chỉ được sửa phòng của chính mình
-      if (!room.createdBy) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, 'Phòng này chưa có chủ sở hữu hợp lệ')
-      }
-
-      if (room.createdBy.toString() !== userId.toString()) {
-        throw new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền sửa phòng này')
-      }
-
       // Nếu là host và phòng đã được duyệt → đổi lại thành pending để admin kiểm duyệt lại
       if (room.status === 'approved') {
         room.status = 'pending'
@@ -355,7 +351,7 @@ const updateAvailability = async (roomId, availability, userId, role) => {
   const room = await RoomModel.findById(roomId)
   if (!room) throw new ApiError(StatusCodes.NOT_FOUND, 'Room not found')
 
-  if (role === 'host' && room.createdBy.toString() !== userId.toString()) {
+  if (room.createdBy.toString() !== userId.toString()) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'You are not allowed to update this room')
   }
 
@@ -498,22 +494,27 @@ const getFavoriteRooms = async (userId) => {
 };
 
 
-const approveRoom = async (roomId, adminId) => {
-  try {
-    const room = await RoomModel.findById(roomId)
-    if (!room) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy địa điểm.')
-    }
-    if (room.status === 'approved') {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Địa điểm đã được phê duyệt.')
-    }
-    room.status = 'approved'
-    room.verifiedBy = adminId
-    await room.save()
-    return room
-  } catch (error) {
-    throw error
+const approveRoom = async (roomId, adminId, status) => {
+  const validStatuses = ['approved', 'rejected']
+
+  if (!validStatuses.includes(status)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Trạng thái không hợp lệ (chỉ cho phép approved hoặc rejected).')
   }
+
+  const room = await RoomModel.findById(roomId)
+  if (!room) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy địa điểm.')
+  }
+
+  if (room.status !== 'pending') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Chỉ có thể phê duyệt hoặc từ chối phòng đang ở trạng thái pending.')
+  }
+
+  room.status = status
+  room.verifiedBy = adminId
+
+  await room.save()
+  return room
 }
 
 const updateRoomCoordinates = async (roomId, latitude, longitude) => {
@@ -603,11 +604,13 @@ const searchRooms = async (filterCriteria) => {
     if (filterCriteria.address) {
       query.address = { $regex: filterCriteria.address, $options: 'i' } // Case-insensitive search
     }
-    if (filterCriteria.district) {
-      query.district = { $regex: filterCriteria.district, $options: 'i' } // Case-insensitive search
-    }
     if (filterCriteria.ward) {
-      query.ward = { $regex: filterCriteria.ward, $options: 'i' } // Case-insensitive search
+      const wards = await WardModel.find({ name: { $regex: filterCriteria.ward, $options: 'i' } }).select('_id')
+      if (wards.length > 0) {
+        query.ward = { $in: wards.map(w => w._id) }
+      } else {
+        query.ward = null
+      }
     }
 
     if (filterCriteria.minPrice || filterCriteria.maxPrice) {
@@ -632,35 +635,58 @@ const searchRooms = async (filterCriteria) => {
   } catch (error) {
     throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message);
   }
-};
-
+}
 const getNearbyRooms = async (queryParams) => {
   try {
     const { latitude, longitude, distance } = queryParams;
-    const rooms = await RoomModel.find({
-      location: {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [parseFloat(longitude), parseFloat(latitude)]
+
+    const rooms = await RoomModel.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
           },
-          $maxDistance: parseInt(distance)
-        }
+          distanceField: "distance",
+          spherical: true,
+          maxDistance: parseInt(distance),
+        },
       },
-      status: 'approved'
-    })
-      .populate({
-        path: 'amenities',
-        select: 'name icon'
-      })
-      .select('name slug address avgRating images location')
-      .limit(20);
+      {
+        $match: { status: "approved" },
+      },
+      {
+        $lookup: {
+          from: "amenities",
+          localField: "amenities",
+          foreignField: "_id",
+          as: "amenities",
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          slug: 1,
+          address: 1,
+          avgRating: 1,
+          totalRatings: 1,
+          totalLikes: 1, 
+          viewCount: 1,   
+          images: 1,
+          location: 1,
+          distance: 1,  
+          amenities: { name: 1, icon: 1 },
+        },
+      },
+      { $limit: 20 },
+    ]);
 
     return rooms;
   } catch (error) {
     throw error;
   }
-}
+};
+
 const getHotRooms = async () => {
   try {
     const now = new Date()
@@ -690,9 +716,11 @@ const getHotRooms = async () => {
           roomId: '$_id',
           name: '$name',
           address: '$address',
+          slug: '$slug',
           image: { $arrayElemAt: ['$images', 0] },
           avgRating: 1,
           favoriteCount: 1,
+          viewCount: 1,
           totalLikes: 1
         }
       }
@@ -785,6 +813,6 @@ export const roomService = {
   getNearbyRooms,
   getHotRooms,
   reportRoom,
-  getRoomsByWard
+  getRoomsByWard,
 }
 

@@ -182,6 +182,31 @@ const processReports = async (req, res, next) => {
     next(error);
   }
 }
+const getTopAmenities = async (req, res, next) => {
+  try {
+    const amenities = await adminService.getTopAmenities()
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Lấy top 5 tiện ích phổ biến thành công',
+      data: amenities
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getTopWards = async (req, res, next) => {
+  try {
+    const wards = await adminService.getTopWards()
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Lấy top 5 khu vực có nhiều phòng nhất thành công',
+      data: wards
+    })
+  } catch (error) {
+    next(error)
+  }
+}
 
 export const adminController = {
   getMe,
@@ -196,5 +221,7 @@ export const adminController = {
   getUserMonthlyStats,
   getTopHosts,
   getReportStats,
-  processReports
+  processReports,
+  getTopAmenities,
+  getTopWards
 }

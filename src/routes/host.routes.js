@@ -5,14 +5,14 @@ import { hostController } from '~/controllers/host.controller.js'
 import { hostValidation } from '~/validations/host.validation.js'
 import { roomValidation } from '~/validations/room.validation.js'
 import { roomController } from '~/controllers/room.controller.js'
-
+import upload from '~/middlewares/cloudinary.middleware.js'
 
 
 const Router = express.Router()
 
-Router.post('/rooms', verifyToken, verifyHost, roomValidation.createNew, roomController.createNew)
+Router.post('/rooms', verifyToken, verifyHost, upload.fields([{ name: 'images' }, { name: 'videos' }]), roomValidation.createNew, roomController.createNew)
 Router.get('/rooms/:id', verifyToken, verifyHost, generalValidation.paramIdValidate, roomController.getAdminRoomDetails)
-Router.patch('/rooms/:id', verifyToken, verifyHost, generalValidation.paramIdValidate, roomController.updateRoom)
+Router.patch('/rooms/:id', verifyToken, verifyHost, upload.fields([{ name: 'images' }, { name: 'videos' }]), generalValidation.paramIdValidate, roomController.updateRoom)
 Router.patch('/rooms/:id/availability', verifyToken, verifyHost, generalValidation.paramIdValidate, roomValidation.updateAvailability, roomController.updateAvailability)
 Router.put('/rooms/:id/coordinates', verifyToken, verifyHost, roomValidation.updateRoomCoordinates, roomController.updateRoomCoordinates)
 Router.delete('/rooms/:id', verifyToken, verifyHost, generalValidation.paramIdValidate, roomController.destroyRoom)

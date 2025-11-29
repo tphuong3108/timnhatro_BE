@@ -22,6 +22,7 @@ Router.get('/map-data', roomValidation.pagingValidate, roomController.getRoomsMa
 Router.get('/hot', roomController.getHotRooms)
 
 // Chi tiết phòng
+Router.get('/:id', generalValidation.paramIdValidate, roomController.getRoomDetails)
 Router.get('/slug/:slug', generalValidation.paramSlugValidate, roomController.getRoomDetailsBySlug)
 Router.get('/:id', generalValidation.paramSlugValidate, roomController.getRoomDetails)
 
@@ -39,5 +40,6 @@ Router.post('/:id/report', verifyToken, verifyRoles('tenant', 'host'), generalVa
 
 // Lấy phòng theo phường/xã
 Router.get('/ward/:wardId', roomController.getRoomsByWard)
+
 
 export const roomRoute = Router

@@ -1,12 +1,17 @@
 import { StatusCodes } from 'http-status-codes'
 import { reviewService } from '../services/review.service.js'
-
+import { processMediaFields } from '../utils/media.js'
 
 const createReview = async (req, res, next) => {
   try {
     const { roomId } = req.params
     const userId = req.user.id
-    const newReview = await reviewService.createReview(roomId, req.body, userId)
+    const media = await processMediaFields(req, { imageField: 'images' })
+    const images = media.images || []
+    const newReview = await reviewService.createReview(roomId, {
+      ...req.body,
+      images
+    }, userId)
 
     res.status(StatusCodes.CREATED).json({ success: true, data: newReview })
   } catch (error) {
@@ -44,7 +49,13 @@ const updateReview = async (req, res, next) => {
   try {
     const { id } = req.params
     const userId = req.user.id
-    const updatedReview = await reviewService.updateReview(id, req.body, userId)
+    const media = await processMediaFields(req, { imageField: 'images' })
+    const images = media.images || []
+
+    const updatedReview = await reviewService.updateReview(id, {
+      ...req.body,
+      ...(images.length && { images })
+    }, userId)
     res.status(StatusCodes.OK).json({ success: true, data: updatedReview })
   } catch (error) {
     next(error)

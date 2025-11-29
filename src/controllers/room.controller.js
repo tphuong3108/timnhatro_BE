@@ -1,16 +1,21 @@
 import { StatusCodes } from 'http-status-codes'
 import { get } from 'mongoose'
 import { roomService } from '~/services/room.service.js'
+import { processMediaFields } from '../utils/media.js'
 
 const createNew = async (req, res, next) => {
   try {
     const userId = req.user.id
     const role = req.user.role
-    const newRoom = await roomService.createNew(
-      req.body,
-      userId,
-      role === 'admin' ? userId : null
-    )
+    const media = await processMediaFields(req, { imageField: 'images', videoField: 'videos' })
+    const images = media.images || []
+    const videos = media.videos || []
+
+    const newRoom = await roomService.createNew({
+      ...req.body,
+      images,
+      videos
+    }, userId, role === 'admin' ? userId : null)
     res.status(StatusCodes.CREATED).json({
       message: 'Room created successfully',
       data: newRoom
@@ -115,7 +120,15 @@ const updateRoom = async (req, res, next) => {
     const userId = req.user.id
     const role = req.user.role
 
-    const updatedRoom = await roomService.updateRoom(roomId, req.body, userId, role)
+    const media = await processMediaFields(req, { imageField: 'images', videoField: 'videos' })
+    const images = media.images || []
+    const videos = media.videos || []
+
+    const updatedRoom = await roomService.updateRoom(roomId, {
+      ...req.body,
+      ...(images.length && { images }),
+      ...(videos.length && { videos })
+    }, userId, role)
 
     res.status(StatusCodes.OK).json({
       message: 'Đã cập nhật phòng thành công',
@@ -240,10 +253,13 @@ const approveRoom = async (req, res, next) => {
   try {
     const roomId = req.params.id
     const adminId = req.user.id
-    const approvedRoom = await roomService.approveRoom(roomId, adminId)
+    const { status } = req.body // 'approved' hoặc 'rejected'
+
+    const updatedRoom = await roomService.approveRoom(roomId, adminId, status)
+
     res.status(StatusCodes.OK).json({
-      message: 'Phòng đã được phê duyệt thành công',
-      data: approvedRoom
+      message: `Phòng đã được ${status === 'approved' ? 'phê duyệt' : 'từ chối'} thành công`,
+      data: updatedRoom
     })
   } catch (error) {
     next(error)
@@ -323,6 +339,7 @@ const getRoomsByWard = async (req, res, next) => {
   }
 }
 
+
 export const roomController = {
   createNew,
   getAllRooms,
@@ -346,5 +363,5 @@ export const roomController = {
   getNearbyRooms,
   getHotRooms,
   reportRoom,
-  getRoomsByWard
+  getRoomsByWard,
 }

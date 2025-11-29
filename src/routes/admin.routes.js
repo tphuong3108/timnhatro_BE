@@ -11,6 +11,8 @@ import { userController } from '~/controllers/user.controller.js'
 import { roomValidation } from '~/validations/room.validation.js'
 import { roomController } from '~/controllers/room.controller.js'
 
+import upload from '~/middlewares/cloudinary.middleware.js'
+
 const Router = express.Router()
 
 Router.get('/me', verifyToken, verifyAdmin, adminController.getMe);
@@ -29,12 +31,14 @@ Router.get('/stats/logins', verifyToken, verifyAdmin, adminController.getLoginSt
 Router.get('/stats/monthlyUsers', verifyToken, verifyAdmin, adminController.getUserMonthlyStats)
 Router.get('/stats/topHosts', verifyToken, verifyAdmin, adminController.getTopHosts)
 Router.get('/stats/reports', verifyToken, verifyAdmin, adminController.getReportStats)
+Router.get('/stats/top-amenities', verifyToken, verifyAdmin, adminController.getTopAmenities)
+Router.get('/stats/top-wards', verifyToken, verifyAdmin, adminController.getTopWards)
 Router.post('/stats/processReports', verifyToken, verifyAdmin, adminController.processReports)
 
-Router.post('/rooms', verifyToken, verifyAdmin, roomValidation.createNew, roomController.createNew)
+Router.post('/rooms', verifyToken, verifyAdmin, upload.fields([{ name: 'images' }, { name: 'videos' }]), roomValidation.createNew, roomController.createNew)
 Router.get('/rooms', verifyToken, verifyAdmin, roomValidation.pagingValidate, roomController.getAllRoomsForAdmin)
 Router.get('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.getAdminRoomDetails)
-Router.patch('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.updateRoom)
+Router.patch('/rooms/:id', verifyToken, verifyAdmin, upload.fields([{ name: 'images' }, { name: 'videos' }]), generalValidation.paramIdValidate, roomController.updateRoom)
 Router.patch('/rooms/:id/approve', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.approveRoom)
 Router.patch('/rooms/:id/coordinates', verifyToken, verifyAdmin, roomValidation.updateRoomCoordinates, roomController.updateRoomCoordinates)
 Router.delete('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.destroyRoom)

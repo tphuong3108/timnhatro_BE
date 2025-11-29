@@ -101,7 +101,7 @@ const getOverviewStats = async (hostId) => {
 }
 
 /**
- * Thống kê lượt xem theo ngày/tuần/tháng của host
+ * Thống kê số lượt tạo phòng bởi host theo ngày/tuần/tháng
  */
 const getDailyStats = async (hostId) => {
   try {
