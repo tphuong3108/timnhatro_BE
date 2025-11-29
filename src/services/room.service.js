@@ -592,16 +592,21 @@ const getUserSuggestedRooms = async (userId) => {
 
 const searchRooms = async (filterCriteria) => {
   try {
-    const query = {}
-    if (filterCriteria.name) {
-      query.name = { $regex: filterCriteria.name, $options: 'i' } // Case-insensitive search
-    }
+    const query = {};
+
     if (filterCriteria.amenity) {
-      const amenity = await AmenityModel.findOne({ $or: [{ slug: filterCriteria.amenity }, { _id: filterCriteria.amenity }] }).select('_id')
-      if (amenity) {
-        query.amenities = amenity._id
-      }
+      const amenities = Array.isArray(filterCriteria.amenity)
+        ? filterCriteria.amenity
+        : filterCriteria.amenity.split(',');
+      const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regexAmenities = amenities.map(a => new RegExp(escapeRegex(a.trim()), 'i'));
+      const amenityDocs = await AmenityModel.find({
+        name: { $in: regexAmenities }
+      }).select('_id');
+      if (amenityDocs.length > 0)
+        query.amenities = { $in: amenityDocs.map(a => a._id) };
     }
+
     if (filterCriteria.address) {
       query.address = { $regex: filterCriteria.address, $options: 'i' } // Case-insensitive search
     }
@@ -613,22 +618,28 @@ const searchRooms = async (filterCriteria) => {
         query.ward = null
       }
     }
-    if (filterCriteria.avgRating) {
-      query.avgRating = { $gte: parseFloat(filterCriteria.avgRating) } // Minimum average rating
+
+    if (filterCriteria.minPrice || filterCriteria.maxPrice) {
+      query.price = {};
+      if (filterCriteria.minPrice)
+        query.price.$gte = parseInt(filterCriteria.minPrice);
+      if (filterCriteria.maxPrice)
+        query.price.$lte = parseInt(filterCriteria.maxPrice);
     }
-    if (filterCriteria.totalRatings) {
-      query.totalRatings = { $gte: parseInt(filterCriteria.totalRatings) } // Minimum total ratings
-    }
-    const rooms = await RoomModel.find({ ...query, status: 'approved' })
-      .populate({
-        path: 'amenities',
-        select: 'name icon'
-      })
-      .select('name slug address avgRating totalRatings amenities location images')
-      .limit(50) // Limit results for performance
-    return rooms
+
+    const rooms = await RoomModel.find({
+      ...query,
+      status: 'approved',
+      isDeleted: false
+    })
+      .populate({ path: 'amenities', select: 'name icon' })
+      .populate({ path: 'ward', select: 'name' })
+      .select('name slug address price avgRating totalRatings amenities location images')
+      .limit(50);
+
+    return rooms;
   } catch (error) {
-    throw error
+    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message);
   }
 }
 const getNearbyRooms = async (queryParams) => {

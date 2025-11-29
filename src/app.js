@@ -5,8 +5,12 @@ import { env } from "~/config/environment.js";
 import { APIs } from "~/routes/index.js";
 import { errorHandler } from "~/middlewares/error.middleware.js";
 import os from "os";
-
+import { setupChatSocket } from "~/sockets/chat.socket.js";
+import { createServer } from "http";
+import { Server } from "socket.io";
 const APP_PORT = env.APP_PORT || 5050;
+
+ 
 
 // Lấy IP LAN tự động
 function getLocalIP() {
@@ -23,6 +27,14 @@ function getLocalIP() {
 
 const START_SERVER = async () => {
   const app = express();
+  const httpServer = createServer(app);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: "*", // có thể cấu hình lại domain FE sau này
+    },
+  });
+  app.set("io", io);
+  setupChatSocket(io);
   app.use(cors());
   app.use("/api/hosts", APIs);
   app.use(express.json({ limit: "50mb" }));
@@ -33,7 +45,7 @@ const START_SERVER = async () => {
   app.use(errorHandler);
 
   //  listen toàn mạng
-  app.listen(APP_PORT, "0.0.0.0", () => {
+  httpServer.listen(APP_PORT, "0.0.0.0", () => {
     const localIP = getLocalIP();
     console.log("=========================================");
     console.log(`🚀 Server đang chạy tại:`);
