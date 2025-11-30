@@ -2,12 +2,12 @@ import mongoose from "mongoose";
 
 const PaymentSchema = new mongoose.Schema(
   {
-    orderId: { type: String, required: true },       // Mã đơn hàng trong hệ thống bạn
-    txnRef: { type: String, required: true, unique: true }, // vnp_TxnRef
-    amount: { type: Number, required: true },        // Số tiền (VND)
+    orderId: { type: String, required: true },
+    txnRef: { type: String, required: true, unique: true },
+    amount: { type: Number, required: true },
     description: { type: String },
 
-    // Thông tin VNPay trả về
+    // Info trả về từ VNPay
     bankCode: { type: String },
     cardType: { type: String },
     vnpTxnNo: { type: String },
@@ -20,16 +20,11 @@ const PaymentSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['pending', 'success', 'failed', 'canceled'],
-      default: 'pending'
-    }
+      enum: ["pending", "success", "failed"],
+      default: "pending",
+    },
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
-PaymentSchema.index({ txnRef: 1 });
-PaymentSchema.index({ orderId: 1 });
-
-module.exports = mongoose.model('Payment', PaymentSchema);
+export const Payment = mongoose.model("Payment", PaymentSchema);
