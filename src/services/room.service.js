@@ -305,28 +305,31 @@ const getRoomDetailsBySlug = async (slug, userId) => {
       .select('comment rating createdAt')
       .sort({ createdAt: -1 });
 
-    // Truy vấn thông tin người dùng
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy người dùng.');
+    // Nếu có `userId` (người dùng đã đăng nhập), thử lấy thông tin người dùng
+    // Nếu không có hoặc không tìm thấy, coi như người xem là anonymous và không đánh dấu isLiked/isFavorited
+    let user = null
+    if (userId) {
+      try {
+        user = await UserModel.findById(userId)
+      } catch (err) {
+        user = null
+      }
     }
 
-    // Kiểm tra user đã thích chưa
-    const isLiked = userId
-      ? room.likeBy.some((u) => u._id.toString() === userId.toString())
-      : false;
+    const isLiked = user && user._id
+      ? room.likeBy.some((u) => u._id.toString() === user._id.toString())
+      : false
 
-    // Kiểm tra user đã lưu phòng vào danh sách yêu thích chưa
-    const isFavorited = userId
-      ? room.favorites.some((fav) => fav.equals(userId))
-      : false;
+    const isFavorited = user && user._id
+      ? room.favorites.some((fav) => fav.equals(user._id))
+      : false
 
     return {
       ...room.toObject(),
       reviews,
       isLiked,
       isFavorited,
-    };
+    }
   } catch (error) {
     throw error;
   }
