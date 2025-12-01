@@ -29,13 +29,13 @@ const notificationSchema = new mongoose.Schema(
         'review:liked',
 
         // Room
+        'room:new',
         'room:reported',
         'room:banned',
         'room:pending_review',
         'room:approved',
         'room:rejected',
         'room:hidden',
-        'review:deleted',
         'room:liked',
 
         // Booking
@@ -56,10 +56,10 @@ const notificationSchema = new mongoose.Schema(
         // Payment
         'payment:success',
         'payment:failed',
-        
-        //Chat
+
+        // Chat
         'chat:message',
-        'chat:new',
+        'chat:new'
       ],
       required: true
     },
@@ -72,7 +72,7 @@ const notificationSchema = new mongoose.Schema(
 
     referenceType: {
       type: String,
-      enum: ['booking', 'room', 'review', 'payment', 'user', null],
+      enum: ['booking', 'room', 'review', 'payment', 'user'],
       default: null
     },
 
@@ -91,7 +91,7 @@ const notificationSchema = new mongoose.Schema(
 
     // Tùy chọn mở rộng, ví dụ gửi roomName, amount, bookingTime...
     metadata: {
-      type: Object,
+      type: mongoose.Schema.Types.Mixed,
       default: {}
     },
 
@@ -108,9 +108,32 @@ const notificationSchema = new mongoose.Schema(
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
 )
 
-const NotificationModel = mongoose.model('notifications', notificationSchema)
+// Indexes để tối ưu tìm kiếm
+notificationSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 })
+notificationSchema.index({ role: 1, isDeleted: 1, createdAt: -1 })
+
+// Transform output: _id -> id, remove __v
+notificationSchema.method('toJSON', function () {
+  const obj = this.toObject()
+  obj.id = obj._id
+  delete obj._id
+  delete obj.__v
+  return obj
+})
+
+// Optional: nếu referenceType tồn tại thì referenceId phải có
+notificationSchema.pre('validate', function (next) {
+  if (this.referenceType && !this.referenceId) {
+    this.invalidate('referenceId', 'referenceId is required when referenceType is set')
+  }
+  next()
+})
+
+const NotificationModel = mongoose.model('Notification', notificationSchema)
 export default NotificationModel

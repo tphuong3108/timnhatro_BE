@@ -26,6 +26,19 @@ const createNew = async (roomData, userId, ownerId) => {
       verifiedBy: ownerId,
       status: ownerId ? 'approved' : 'pending'
     })
+    // Tạo thông báo cho host về đánh giá mới
+    await notificationService.createNew({
+      userId: null,
+      role: 'admin',
+      title: 'Có phòng mới cần duyệt',
+      message: `Một phòng mới vừa được tạo và chờ duyệt: ${room.name}`,
+      metadata: {
+        roomId: newRoom._id,
+        createdBy: userId
+      },
+      type: 'room:new'
+    })
+    
     return newRoom
   } catch (error) {
     throw error

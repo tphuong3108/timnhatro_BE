@@ -71,11 +71,13 @@ export const paymentService = {
         // --- Thêm thông báo ---
         await notificationService.createNew({
             userId: payment.userId,
-            title: isSuccess ? "Thanh toán thành công" : "Thanh toán thất bại",
-            content: isSuccess
-            ? `Bạn đã thanh toán thành công đơn hàng #${payment.orderId} với số tiền ${payment.amount} VND`
-            : `Thanh toán đơn hàng #${payment.orderId} không thành công. Vui lòng thử lại.`,
-            type: isSuccess ? "payment:success" : "payment:failed",
+            title: verify.isSuccess ? "Thanh toán thành công" : "Thanh toán thất bại",
+            message: verify.isSuccess
+              ? `Bạn đã thanh toán thành công đơn hàng #${payment.orderId} với số tiền ${payment.amount} VND`
+              : `Thanh toán đơn hàng #${payment.orderId} không thành công. Vui lòng thử lại.`,
+            type: verify.isSuccess ? "payment:success" : "payment:failed",
+            referenceId: payment._id,
+            referenceType: 'payment'
         });
         return verify;
     }

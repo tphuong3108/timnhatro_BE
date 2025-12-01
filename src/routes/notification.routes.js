@@ -26,11 +26,11 @@ Router.post(
  * - host tự xem thông báo của host
  */
 Router.get(
-  '/user/:userId',
+  '/me',
   verifyToken,
   verifyRoles('tenant', 'host'),
-  generalValidation.paramIdValidate,
-  notificationController.getUserNotifications
+  // generalValidation.paramIdValidate,
+  notificationController.getMyNotifications
 )
 
 /**

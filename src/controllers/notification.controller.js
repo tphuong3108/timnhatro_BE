@@ -21,14 +21,15 @@ const createNotification = async (req, res, next) => {
 /**
  * Lấy thông báo của 1 user (tenant/host)
  */
-const getUserNotifications = async (req, res, next) => {
+const getMyNotifications = async (req, res, next) => {
   try {
-    const userId = req.params.userId
+    const userId = req.user.id  // Lấy từ token
+
     const notifications = await notificationService.getNotificationsByUser(userId)
 
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'User notifications retrieved successfully',
+      message: 'Notifications retrieved successfully',
       data: notifications
     })
   } catch (error) {
@@ -91,7 +92,7 @@ const deleteNotification = async (req, res, next) => {
 
 export const notificationController = {
   createNotification,
-  getUserNotifications,
+  getMyNotifications,
   getAdminNotifications,
   markAsRead,
   deleteNotification
