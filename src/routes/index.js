@@ -11,6 +11,9 @@ import { chatRoute } from "./chat.route.js";
 import { messageRoute } from "./message.route.js";
 import { bookingRoom } from './booking.route.js'
 import {paymentRoute} from "./payment.routes.js";
+import { aiRoute } from "./ai.routers.js";
+import weaviateRoute from "./weaviate.js";
+
 const Router = express.Router()
 
 Router.get('/status', (req, res) => {
@@ -28,7 +31,9 @@ Router.use('/reviews', reviewRouter)
 Router.use('/amenities', amenityRoute)
 
 Router.use("/chats", chatRoute);
+Router.use("/ai", aiRoute);
 Router.use("/messages", messageRoute);
 Router.use("/bookings", bookingRoom)
 Router.use("/payment", paymentRoute);
+Router.use("/weaviate", weaviateRoute);
 export const APIs = Router
