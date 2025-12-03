@@ -1,5 +1,6 @@
 import Booking from "../models/Booking.model.js";
 import Room from "../models/Room.model.js";
+import { notificationService } from "./notification.service.js";
 
 export const bookingService = {
  async createBooking(userId, { roomId, date, time, note }) {
@@ -44,25 +45,35 @@ export const bookingService = {
     time,
     status: { $in: ["pending", "approved"] }
   });
-  if (timeBusy) throw new Error("Khung giờ này đã có người đặt");
-  console.log("[BOOKING] Created:", {
-  roomId,
-  hostId,
-  userId,
-  date,
-  time
-});
+    if (timeBusy) throw new Error("Khung giờ này đã có người đặt");
+    const booking = await Booking.create({
+      roomId,
+      hostId,
+      userId,
+      date,
+      time,
+      note,
+      status: "pending",
+    });
 
-  return await Booking.create({
-    roomId,
-    hostId,
-    userId,
-    date,
-    time,
-    note,
-    status: "pending",
-  });
-},
+    // Thông báo cho host
+    await notificationService.createNew({
+      userId: hostId,
+      title: "Có booking mới",
+      content: `Người dùng đã đặt phòng ${room.name} vào ${date} lúc ${time}`,
+      type: "booking:new",
+    });
+
+    // Thông báo cho user
+    await notificationService.createNew({
+      userId,
+      title: "Booking đã được tạo",
+      content: `Bạn đã đặt phòng ${room.name} vào ${date} lúc ${time}. Chờ host duyệt.`,
+      type: "booking:created",
+    });
+
+    return booking;
+  },
 
 
   async approveBooking(bookingId, hostId) {
@@ -77,6 +88,13 @@ export const bookingService = {
     booking.status = "approved";
     await booking.save();
 
+    // Thông báo cho user
+    await notificationService.createNew({
+      userId: booking.userId,
+      title: "Booking đã được duyệt",
+      content: `Booking phòng ${booking.roomId} vào ${booking.date} lúc ${booking.time} đã được host duyệt.`,
+      type: "booking:approved",
+    });
     return booking;
   },
 
@@ -92,6 +110,12 @@ export const bookingService = {
     booking.status = "declined";
     await booking.save();
 
+    await notificationService.createNew({
+      userId: booking.userId,
+      title: "Booking đã bị từ chối",
+      content: `Booking phòng ${booking.roomId} vào ${booking.date} lúc ${booking.time} đã bị host từ chối.`,
+      type: "booking:declined",
+    });
     return booking;
   },
 
@@ -107,6 +131,21 @@ export const bookingService = {
     booking.status = "canceled";
     await booking.save();
 
+    // Thông báo cho host
+    await notificationService.createNew({
+      userId: booking.hostId,
+      title: "Booking đã bị hủy",
+      content: `Người dùng đã hủy booking phòng ${booking.roomId} vào ${booking.date} lúc ${booking.time}.`,
+      type: "booking:canceled_by_user",
+    });
+
+    // Thông báo cho user
+    await notificationService.createNew({
+      userId,
+      title: "Bạn đã hủy booking",
+      content: `Bạn đã hủy booking phòng ${booking.roomId} vào ${booking.date} lúc ${booking.time}.`,
+      type: "booking:canceled_by_user",
+    });
     return booking;
   },
 
@@ -131,6 +170,13 @@ export const bookingService = {
   booking.status = "completed";
   await booking.save();
 
+    // Thông báo cho user
+    await notificationService.createNew({
+      userId: booking.userId,
+      title: "Booking đã hoàn thành",
+      content: `Booking phòng ${booking.roomId} vào ${booking.date} lúc ${booking.time} đã được hoàn thành.`,
+      type: "booking:completed",
+    });
     return booking;
   },
 

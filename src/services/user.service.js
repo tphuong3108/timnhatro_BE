@@ -7,6 +7,7 @@ import RefreshTokenModel from '~/models/RefreshToken.model'
 import sendMail from '~/utils/sendMail.js'
 import ReviewModel from '~/models/Review.model.js'
 import RoomModel from '~/models/Room.model.js'
+import { notificationService } from './notification.service.js'
 
 const register = async (userData) => {
   try {
@@ -442,6 +443,14 @@ const banUser = async (userId, currentUser) => {
     }
     user.banned = true
     await user.save()
+
+    // Tạo thông báo
+    await notificationService.createNew({
+      userId: user._id,
+      title: 'Tài khoản của bạn đã bị khóa',
+      content: 'Tài khoản của bạn đã bị khóa bởi quản trị viên.',
+      type: 'account:banned'
+    })
     return { message: 'Tài khoản đã bị khóa thành công' };
   } catch (error) {
     throw error
@@ -458,6 +467,14 @@ const banSelf = async (userId) => {
     }
     user.banned = true
     await user.save()
+
+     // Tạo thông báo
+    await notificationService.createNew({
+      userId: user._id,
+      title: 'Tài khoản của bạn đã bị khóa',
+      content: 'Bạn đã tự khóa tài khoản của mình.',
+      type: 'account:self_banned'
+    })
     return { message: 'Tài khoản của bạn đã được khóa thành công'}; 
   } catch (error) {
     throw error
@@ -484,6 +501,14 @@ const destroyUser = async (userId, currentUser) => {
     }
     user._destroyed = true
     await user.save()
+
+    // Tạo thông báo
+    await notificationService.createNew({
+      userId: user._id,
+      title: 'Tài khoản của bạn đã bị xóa',
+      content: 'Tài khoản của bạn đã bị xóa (soft delete) bởi quản trị viên.',
+      type: 'account:deleted'
+    })
     return { message: 'User has been deleted (soft delete) successfully' };
   } catch (error) {
     throw error
@@ -542,6 +567,13 @@ const upgradeToHost = async (userId) => {
   user.updatedAt = new Date()
   await user.save()
 
+   // Tạo thông báo
+  await notificationService.createNew({
+    userId: user._id,
+    title: 'Chúc mừng! Bạn đã trở thành Host',
+    content: 'Quyền của bạn đã được nâng cấp từ Tenant lên Host.',
+    type: 'account:role_upgraded'
+  })
   return {
     id: user._id,
     firstName: user.firstName,

@@ -1,4 +1,5 @@
 import Chat from "../models/Chat.model.js";
+import { notificationService } from "./notification.service.js";
 
 export const chatService = {
   async getChatsByUser(userId) {
@@ -37,9 +38,19 @@ export const chatService = {
       roomId,
     });
 
-    return Chat.findById(newChat._id)
+    const populatedChat = await Chat.findById(newChat._id)
       .populate("participants", "firstName lastName avatar email")
       .populate("roomId", "name images address price");
+
+    // Thông báo cho receiver về chat mới
+    await notificationService.createNew({
+      userId: receiverId,
+      title: "Bạn có chat mới",
+      content: `Bạn có một chat mới về phòng ${populatedChat.roomId.name}`,
+      type: "chat:new",
+    });
+
+    return populatedChat;
   },
   async updateLastMessage(chatId, messageId) {
     return Chat.findByIdAndUpdate(

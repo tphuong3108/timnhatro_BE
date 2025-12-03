@@ -3,6 +3,7 @@ import { vnpay } from "../config/vnpay.js";
 import { dateFormat } from "vnpay/utils";
 import dotenv from "dotenv";
 import { Payment } from "../models/Payment.model.js";
+import { notificationService } from "./notification.service.js";
 dotenv.config();
 
 export const paymentService = {
@@ -67,6 +68,17 @@ export const paymentService = {
 
         await payment.save();
 
+        // --- Thêm thông báo ---
+        await notificationService.createNew({
+            userId: payment.userId,
+            title: verify.isSuccess ? "Thanh toán thành công" : "Thanh toán thất bại",
+            message: verify.isSuccess
+              ? `Bạn đã thanh toán thành công đơn hàng #${payment.orderId} với số tiền ${payment.amount} VND`
+              : `Thanh toán đơn hàng #${payment.orderId} không thành công. Vui lòng thử lại.`,
+            type: verify.isSuccess ? "payment:success" : "payment:failed",
+            referenceId: payment._id,
+            referenceType: 'payment'
+        });
         return verify;
     }
 };

@@ -8,6 +8,7 @@ import ReviewModel from '~/models/Review.model.js'
 
 import { OBJECT_ID_RULE } from '~/utils/validators'
 import AmenityModel from '~/models/Amenity.model.js'
+import { notificationService } from './notification.service.js'
 
 const queryGenerate = async (id) => {
   if (id.match(OBJECT_ID_RULE)) {
@@ -25,6 +26,19 @@ const createNew = async (roomData, userId, ownerId) => {
       verifiedBy: ownerId,
       status: ownerId ? 'approved' : 'pending'
     })
+    // Tạo thông báo cho host về đánh giá mới
+    await notificationService.createNew({
+      userId: null,
+      role: 'admin',
+      title: 'Có phòng mới cần duyệt',
+      message: `Một phòng mới vừa được tạo và chờ duyệt: ${room.name}`,
+      metadata: {
+        roomId: newRoom._id,
+        createdBy: userId
+      },
+      type: 'room:new'
+    })
+    
     return newRoom
   } catch (error) {
     throw error
@@ -355,6 +369,15 @@ const updateRoom = async (roomId, updateData, userId, role) => {
       if (room.status === 'approved') {
         room.status = 'pending'
         room.verifiedBy = null
+
+        // Thông báo cho admin về phòng cần được duyệt lại
+        await notificationService.createNew({
+          userId: null,
+          role: 'admin',
+          type: 'room:pending_review',
+          title: 'Phòng cần được duyệt lại',
+          message: `Host đã cập nhật phòng "${room.name}".`
+        })
       }
     }
 
@@ -428,6 +451,15 @@ const likeRoom = async (roomId, userId) => {
     } else {
       room.likeBy.push(userObjectId)
       isLiked = true    // => Đã thích
+
+      // Tạo thông báo cho host khi có người thích phòng của họ
+      await notificationService.createNew({
+        userId: room.createdBy,
+        role: 'host',
+        type: 'room:liked',
+        title: 'Phòng của bạn được yêu thích',
+        message: `Một tenant đã thích phòng "${room.name}".`
+      })
     }
     await room.save()
     await room.updateTotalLikes()
@@ -523,6 +555,15 @@ const approveRoom = async (roomId, adminId, status) => {
   room.verifiedBy = adminId
 
   await room.save()
+
+  // Tạo thông báo cho host về kết quả phê duyệt
+  await notificationService.createNew({
+    userId: room.createdBy,
+    role: 'host',
+    type: status === 'approved' ? 'room:approved' : 'room:rejected',
+    title: status === 'approved' ? 'Phòng đã được duyệt' : 'Phòng bị từ chối',
+    message: `Phòng "${room.name}" đã được cập nhật trạng thái: ${status}.`
+  })
   return room
 }
 
@@ -595,16 +636,21 @@ const getUserSuggestedRooms = async (userId) => {
 
 const searchRooms = async (filterCriteria) => {
   try {
-    const query = {}
-    if (filterCriteria.name) {
-      query.name = { $regex: filterCriteria.name, $options: 'i' } // Case-insensitive search
-    }
+    const query = {};
+
     if (filterCriteria.amenity) {
-      const amenity = await AmenityModel.findOne({ $or: [{ slug: filterCriteria.amenity }, { _id: filterCriteria.amenity }] }).select('_id')
-      if (amenity) {
-        query.amenities = amenity._id
-      }
+      const amenities = Array.isArray(filterCriteria.amenity)
+        ? filterCriteria.amenity
+        : filterCriteria.amenity.split(',');
+      const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regexAmenities = amenities.map(a => new RegExp(escapeRegex(a.trim()), 'i'));
+      const amenityDocs = await AmenityModel.find({
+        name: { $in: regexAmenities }
+      }).select('_id');
+      if (amenityDocs.length > 0)
+        query.amenities = { $in: amenityDocs.map(a => a._id) };
     }
+
     if (filterCriteria.address) {
       query.address = { $regex: filterCriteria.address, $options: 'i' } // Case-insensitive search
     }
@@ -616,22 +662,28 @@ const searchRooms = async (filterCriteria) => {
         query.ward = null
       }
     }
-    if (filterCriteria.avgRating) {
-      query.avgRating = { $gte: parseFloat(filterCriteria.avgRating) } // Minimum average rating
+
+    if (filterCriteria.minPrice || filterCriteria.maxPrice) {
+      query.price = {};
+      if (filterCriteria.minPrice)
+        query.price.$gte = parseInt(filterCriteria.minPrice);
+      if (filterCriteria.maxPrice)
+        query.price.$lte = parseInt(filterCriteria.maxPrice);
     }
-    if (filterCriteria.totalRatings) {
-      query.totalRatings = { $gte: parseInt(filterCriteria.totalRatings) } // Minimum total ratings
-    }
-    const rooms = await RoomModel.find({ ...query, status: 'approved' })
-      .populate({
-        path: 'amenities',
-        select: 'name icon'
-      })
-      .select('name slug address avgRating totalRatings amenities location images')
-      .limit(50) // Limit results for performance
-    return rooms
+
+    const rooms = await RoomModel.find({
+      ...query,
+      status: 'approved',
+      isDeleted: false
+    })
+      .populate({ path: 'amenities', select: 'name icon' })
+      .populate({ path: 'ward', select: 'name' })
+      .select('name slug address price avgRating totalRatings amenities location images')
+      .limit(50);
+
+    return rooms;
   } catch (error) {
-    throw error
+    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message);
   }
 }
 const getNearbyRooms = async (queryParams) => {
@@ -757,6 +809,15 @@ const reportRoom = async (roomId, userId, reportReason) => {
 
     room.reports.push({ userId, reason: reportReason })
     await room.save()
+
+    // Tạo thông báo cho admin về phòng bị báo cáo
+    await notificationService.createNew({
+      userId: null,
+      role: 'admin',
+      type: 'room:reported',
+      title: 'Có báo cáo mới',
+      message: `Phòng "${room.name}" vừa bị báo cáo bởi người dùng.`
+    })
 
     return {
       success: true,
