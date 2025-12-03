@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "type": "module",
     "dev": "nodemon --exec babel-node ./src/app.js",
-    "start": "node ./dist/app.js", 
+    "start": "node ./dist/app.js",
     "build": "babel src -d dist"
   },
   "keywords": [],
@@ -16,9 +16,7 @@
   "dependencies": {
     "@babel/runtime": "^7.28.4",
     "bcryptjs": "^3.0.2",
-    
     "cloudinary": "^1.41.3",
-
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dateformat": "^5.0.3",

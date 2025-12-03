@@ -1,5 +1,6 @@
 import Message from "../models/Message.model.js";
 import Chat from "../models/Chat.model.js";
+import { notificationService } from "./notification.service.js";
 
 export const messageService = {
   async sendMessageWithChatId({ chatId, senderId, content = "", images = [] }) {
@@ -19,6 +20,18 @@ export const messageService = {
     });
     await Chat.findByIdAndUpdate(chatId, { lastMessage: message._id });
 
+     // Gửi thông báo cho tất cả participants ngoại trừ sender
+    const receivers = chat.participants.filter(p => p._id.toString() !== senderId.toString());
+    for (const receiver of receivers) {
+      await notificationService.createNew({
+        userId: receiver._id,
+        title: "Tin nhắn mới",
+        content: content
+          ? `Bạn có tin nhắn mới từ ${chat.participants.find(p => p._id.toString() === senderId.toString()).firstName}`
+          : "Bạn có tin nhắn mới",
+        type: "chat:message",
+      });
+    }
     return message.populate("sender", "firstName lastName avatar");
   },
   async getMessages(chatId) {

@@ -11,6 +11,7 @@ import { chatRoute } from "./chat.route.js";
 import { messageRoute } from "./message.route.js";
 import { bookingRoom } from './booking.route.js'
 import {paymentRoute} from "./payment.routes.js";
+import { notificationRoute } from './notification.routes.js'
 const Router = express.Router()
 
 Router.get('/status', (req, res) => {
@@ -31,4 +32,5 @@ Router.use("/chats", chatRoute);
 Router.use("/messages", messageRoute);
 Router.use("/bookings", bookingRoom)
 Router.use("/payment", paymentRoute);
+Router.use("/notifications", notificationRoute);
 export const APIs = Router
