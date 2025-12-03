@@ -2,28 +2,46 @@ import { StatusCodes } from 'http-status-codes'
 import { get } from 'mongoose'
 import { roomService } from '~/services/room.service.js'
 import { processMediaFields } from '../utils/media.js'
+import cloudinary from "../config/cloudinary.js";
 
 const createNew = async (req, res, next) => {
   try {
-    const userId = req.user.id
-    const role = req.user.role
-    const media = await processMediaFields(req, { imageField: 'images', videoField: 'videos' })
-    const images = media.images || []
-    const videos = media.videos || []
+    const userId = req.user.id;
+    const role = req.user.role;
 
-    const newRoom = await roomService.createNew({
-      ...req.body,
-      images,
-      videos
-    }, userId, role === 'admin' ? userId : null)
-    res.status(StatusCodes.CREATED).json({
-      message: 'Room created successfully',
-      data: newRoom
-    })
+    console.log("🧾 req.body nhận được:", req.body.images?.length, "ảnh");
+
+    const base64Images = req.body.images || [];
+    const uploadedImages = [];
+
+    for (const img of base64Images) {
+      const uploadResult = await cloudinary.uploader.upload(img, {
+        folder: "uploads/images",
+        resource_type: "image",
+      });
+      uploadedImages.push(uploadResult.secure_url);
+    }
+
+    const newRoom = await roomService.createNew(
+      {
+        ...req.body,
+        images: uploadedImages,
+        videos: [],
+      },
+      userId,
+      role === "admin" ? userId : null
+    );
+
+    res.status(201).json({
+      message: "Room created successfully",
+      data: newRoom,
+    });
   } catch (error) {
-    next(error)
+    console.error("❌ Lỗi tạo phòng:", error);
+    res.status(500).json({ message: "Something went wrong!", error });
   }
-}
+};
+
 
 const getAllRooms = async (req, res, next) => {
   try {
@@ -102,7 +120,8 @@ const getRoomDetails = async (req, res, next) => {
 const getRoomDetailsBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params
-    const roomDetails = await roomService.getRoomDetailsBySlug(slug)
+    const userId = req.user?._id || req.user?.id;
+    const roomDetails = await roomService.getRoomDetailsBySlug(slug, userId)
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -196,7 +215,8 @@ const likeRoom = async (req, res, next) => {
       success: true,
       message: isLiked
         ? 'Đã thích phòng thành công'
-        : 'Đã bỏ thích phòng thành công'
+        : 'Đã bỏ thích phòng thành công',
+        data: { isLiked } 
     })
   } catch (error) {
     next(error)
@@ -204,34 +224,34 @@ const likeRoom = async (req, res, next) => {
 }
 
 const addToFavorites = async (req, res, next) => {
+  const { slug } = req.params;
+  const userId = req.user.id;
+
   try {
-    const roomId = req.params.id
-    const userId = req.user.id
-    const user = await roomService.addToFavorites(roomId, userId)
+    await roomService.addToFavorites(slug, userId);
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'Đã thêm phòng vào yêu thích thành công',
-      user
-    })
+      message: 'Đã thêm phòng vào yêu thích thành công.',
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 const removeFromFavorites = async (req, res, next) => {
+  const { slug } = req.params;
+  const userId = req.user.id;
+
   try {
-    const roomId = req.params.id
-    const userId = req.user.id
-    const user = await roomService.removeFromFavorites(roomId, userId)
+    await roomService.removeFromFavorites(slug, userId);
     res.status(StatusCodes.OK).json({
       success: true,
-      message: 'Đã xóa phòng khỏi yêu thích thành công',
-      user
-    })
+      message: 'Đã xóa phòng khỏi yêu thích thành công.',
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 const updateRoomCoordinates = async (req, res, next) => {
   try {
