@@ -11,6 +11,10 @@ import { chatRoute } from "./chat.route.js";
 import { messageRoute } from "./message.route.js";
 import { bookingRoom } from './booking.route.js'
 import {paymentRoute} from "./payment.routes.js";
+import { notificationRoute } from "./notification.routes.js";
+import { aiRoute } from "./ai.routers.js";
+import  weaviateRoute  from './weaviate.js'
+
 const Router = express.Router()
 
 Router.get('/status', (req, res) => {
