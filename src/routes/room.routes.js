@@ -25,7 +25,7 @@ Router.get('/hot', roomController.getHotRooms)
 Router.get('/slug/:slug', generalValidation.paramSlugValidate, verifyTokenOptional, roomController.getRoomDetailsBySlug)
 Router.get('/:id', generalValidation.paramIdValidate, roomController.getRoomDetails)
 
-
+Router.get('/:id/premium-status', roomController.checkRoomPremiumStatus);
 // Like phòng
 Router.patch('/:id', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.likeRoom)
 
