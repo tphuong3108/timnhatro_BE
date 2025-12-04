@@ -31,7 +31,7 @@ const createNew = async (roomData, userId, ownerId) => {
       userId: null,
       role: 'admin',
       title: 'Có phòng mới cần duyệt',
-      message: `Một phòng mới vừa được tạo và chờ duyệt: ${room.name}`,
+      message: `Một phòng mới vừa được tạo và chờ duyệt: ${newRoom.name}`,
       metadata: {
         roomId: newRoom._id,
         createdBy: userId
