@@ -19,7 +19,7 @@ const roomSchema = new mongoose.Schema({
     required: true,
     trim: true,
     minlength: 10,
-    maxlength: 500
+    maxlength: 3000
   },
   price: {
     type: Number,

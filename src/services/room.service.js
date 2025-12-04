@@ -739,48 +739,117 @@ const getNearbyRooms = async (queryParams) => {
 
 const getHotRooms = async () => {
   try {
-    const now = new Date()
-    const startOfWeek = new Date(now)
-    const day = now.getDay() // 0 = Chủ nhật
-    startOfWeek.setDate(now.getDate() - day)
-    startOfWeek.setHours(0, 0, 0, 0)
+    const LIMIT = 20;
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const day = now.getDay(); // 0 = Chủ nhật
+    startOfWeek.setDate(now.getDate() - day);
+    startOfWeek.setHours(0, 0, 0, 0);
 
-    const hotRooms = await RoomModel.aggregate([
+    // phòng nổi bật trong tuần
+    const weeklyRooms = await RoomModel.aggregate([
       {
         $match: {
-          createdAt: { $gte: startOfWeek, $lte: now }
+          createdAt: { $gte: startOfWeek, $lte: now },
+          status: "approved",
+          availability: "available",
+          isDeleted: false
         }
       },
       {
         $addFields: {
-          favoriteCount: { $size: { $ifNull: ['$favorites', []] } }
+          favoriteCount: { $size: { $ifNull: ["$favorites", []] } },
+          hotScore: {
+            $add: [
+              { $multiply: [{ $ifNull: ["$avgRating", 0] }, 10] },
+              { $multiply: [{ $ifNull: ["$totalLikes", 0] }, 2] },
+              { $ifNull: ["$viewCount", 0] }
+            ]
+          }
         }
       },
       {
-        // Sắp xếp theo: rating cao → favorite nhiều → like nhiều
-        $sort: { avgRating: -1, favoriteCount: -1, totalLikes: -1 }
-      },      
+        $sort: {
+          hotScore: -1 ,
+          avgRating: -1, 
+          totalLikes: -1, 
+          viewCount: -1          
+        }
+      },
       {
         $project: {
           _id: 0,
-          roomId: '$_id',
-          name: '$name',
-          address: '$address',
-          slug: '$slug',
-          image: { $arrayElemAt: ['$images', 0] },
+          roomId: "$_id",
+          name: 1,
+          address: 1,
+          slug: 1,
+          image: { $arrayElemAt: ["$images", 0] },
+          hotScore: 1,
           avgRating: 1,
           favoriteCount: 1,
-          viewCount: 1,
-          totalLikes: 1
+          totalLikes: 1,
+          viewCount: 1
         }
-      }
-    ])
+      },
+      { $limit: LIMIT }
+    ]);
 
-    return hotRooms
+    if (weeklyRooms.length >= LIMIT) return weeklyRooms; // Nếu có dữ liệu thỏa -> trả về luôn
+
+    const needed = LIMIT - weeklyRooms.length;
+    // Lấy top phòng có like + view cao nhất nếu không có phòng nổi bật
+    let fallbackRooms = await RoomModel.aggregate([
+      {
+        $match: {
+          status: "approved",
+          availability: "available",
+          isDeleted: false,
+          _id: { $nin: weeklyRooms.map(r => r.roomId) } // tránh trùng bài
+        }
+      },
+      {
+        $addFields: {
+          favoriteCount: { $size: { $ifNull: ["$favorites", []] } },
+          hotScore: {
+            $add: [
+              { $multiply: [{ $ifNull: ["$avgRating", 0] }, 10] },
+              { $multiply: [{ $ifNull: ["$totalLikes", 0] }, 2] },
+              { $ifNull: ["$viewCount", 0] }
+            ]
+          }
+        }
+      },
+      {
+        $sort: {
+          hotScore: -1 ,
+          avgRating: -1, 
+          totalLikes: -1, 
+          viewCount: -1
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          roomId: "$_id",
+          name: 1,
+          address: 1,
+          slug: 1,
+          image: { $arrayElemAt: ["$images", 0] },
+          hotScore: 1,
+          avgRating: 1,
+          favoriteCount: 1,
+          totalLikes: 1,
+          viewCount: 1
+        }
+      },
+      { $limit: needed  }
+    ]);
+
+    return [...weeklyRooms, ...fallbackRooms];
   } catch (error) {
-    throw error
+    throw error;
   }
-}
+};
 
 const reportRoom = async (roomId, userId, reportReason) => {
   try {

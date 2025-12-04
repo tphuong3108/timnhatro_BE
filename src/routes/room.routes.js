@@ -1,5 +1,5 @@
 import express from 'express'
-import { verifyToken, verifyRoles, verifyAdmin, verifyHost, verifyTokenOptional  } from '~/middlewares/auth.middleware.js'
+import { verifyToken, verifyRoles, verifyTokenOptional  } from '~/middlewares/auth.middleware.js'
 import { roomValidation } from '~/validations/room.validation.js'
 import { roomController } from '~/controllers/room.controller.js'
 import { generalValidation } from '~/validations/general.validation.js'
