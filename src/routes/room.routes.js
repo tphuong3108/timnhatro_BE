@@ -22,8 +22,9 @@ Router.get('/map-data', roomValidation.pagingValidate, roomController.getRoomsMa
 Router.get('/hot', roomController.getHotRooms)
 
 // Chi tiết phòng
-Router.get('/:id', generalValidation.paramIdValidate, roomController.getRoomDetails)
 Router.get('/slug/:slug', generalValidation.paramSlugValidate, verifyTokenOptional, roomController.getRoomDetailsBySlug)
+Router.get('/:id', generalValidation.paramIdValidate, roomController.getRoomDetails)
+
 
 // Like phòng
 Router.patch('/:id', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.likeRoom)

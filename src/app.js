@@ -5,6 +5,7 @@ import { env } from "~/config/environment.js";
 import { APIs } from "~/routes/index.js";
 import { errorHandler } from "~/middlewares/error.middleware.js";
 import os from "os";
+import { initWeaviate } from "./services/vector.service.js";
 import { setupChatSocket } from "~/sockets/chat.socket.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -59,6 +60,7 @@ const START_SERVER = async () => {
 (async () => {
   console.log("Connecting to database...");
   await connectDB();
+  initWeaviate();
   console.log("Database connected successfully");
   console.log("Starting server...");
   await START_SERVER();

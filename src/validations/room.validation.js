@@ -71,20 +71,44 @@ const createNew = async (req, res, next) => {
         'string.base': 'each video must be a string'
       })
     ).optional(),
+    // images: Joi.array().items(
+    //   Joi.string().uri().messages({
+    //     'string.base': 'each image must be a string',
+    //     'string.uri': 'each image must be a valid URL'
+    //   })
+    // ).min(1).required().messages({
+    //   'array.base': 'images must be an array of strings',
+    //   'array.min': 'at least 1 image is required'
+    // }),
+    // videos: Joi.array().items(
+    //   Joi.string().messages({
+    //     'string.base': 'each video must be a string'
+    //   })
+    // ).optional(),
   })
   try {
-    // if (req.body.location && typeof req.body.location === 'string') {
-    //   req.body.location = JSON.parse(req.body.location)
-    // }
-    // if (req.body.amenities && typeof req.body.amenities === 'string') {
-    //   req.body.amenities = JSON.parse(req.body.amenities)
-    // }
-    // if (req.body.ward && typeof req.body.ward === 'string') {
-    //   req.body.ward = JSON.parse(req.body.ward)[0]
-    // }
     const data = req?.body ? req.body : {}
+    // Kết hợp images từ req.body và req.files
+    const filesImages = req.files?.images?.map(f => f.path) || []
+    if (data.images) {
+      data.images = Array.isArray(data.images) ? data.images.concat(filesImages) : [data.images, ...filesImages]
+    } else {
+      data.images = filesImages
+    }
+
+    if (!data.images || data.images.length === 0) {
+      throw new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, '"images" is required')
+    }
+
     await validationRule.validateAsync(data, { abortEarly: false })
+    req.body = data
     next()
+    // await validationRule.validateAsync(data, { abortEarly: false })
+    // // Kiểm tra images từ req.files (bắt buộc phải có ít nhất 1 file)
+    // if (!req.files || !req.files.images || req.files.images.length === 0) {
+    //   throw new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, '"images" is required');
+    // }
+    // next()
   } catch (error) {
     next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
   }
@@ -147,6 +171,14 @@ const updateRoomValidate = async (req, res, next) => {
   try {
     const roomIdData = req?.params || {}
     const data = req?.body ? req.body : {}
+
+     // Kết hợp images từ req.body và req.files
+    const filesImages = req.files?.images?.map(f => f.path) || []
+    if (data.images) {
+      data.images = Array.isArray(data.images) ? data.images.concat(filesImages) : [data.images, ...filesImages]
+    } else if (filesImages.length > 0) {
+      data.images = filesImages
+    }
 
     await idRule.validateAsync(roomIdData, { abortEarly: false })
     await validationRule.validateAsync(data, { abortEarly: false })

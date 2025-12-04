@@ -2,6 +2,7 @@ import ReviewModel from '~/models/Review.model.js'
 import ApiError from '~/utils/ApiError.js'
 import { StatusCodes } from 'http-status-codes'
 import RoomModel from '../models/Room.model'
+import { notificationService } from './notification.service.js'
 
 const createReview = async (roomId, reviewData, userId) => {
   try {
@@ -31,6 +32,15 @@ const createReview = async (roomId, reviewData, userId) => {
     const populatedReview = await ReviewModel.findById(newReview._id)
       .populate('userId', 'firstName lastName name avatar email')
       .select('comment rating createdAt userId')
+    
+    // Tạo thông báo cho host về đánh giá mới
+    await notificationService.createNew({
+      userId: room.hostId, // người sở hữu phòng
+      title: 'Bạn có một đánh giá mới',
+      content: `Người dùng ${populatedReview.userId.firstName} đã đánh giá phòng của bạn.`,
+      type: 'review:new',
+      referenceId: newReview._id
+    })
     return populatedReview
   } catch (error) {
     throw error
@@ -90,6 +100,18 @@ const deleteReview = async (reviewId, user) => {
     review.isDeleted = true
     await review.save()
     await review.updateRoomAvgRating()
+
+    // Tạo thông báo cho host về việc đánh giá bị xoá
+    const room = await RoomModel.findById(review.roomId)
+    if (room) {
+      await notificationService.createNew({
+        userId: room.hostId,
+        title: 'Một đánh giá đã bị xoá',
+        content: `Đánh giá từ người dùng ${user.id} trên phòng của bạn đã bị xoá.`,
+        type: 'review:deleted',
+        referenceId: review._id
+      })
+    }
     return { success: true, message: 'Đánh giá đã được xoá thành công.' }
   } catch (error) {
     throw error
@@ -133,6 +155,17 @@ const likeReview = async (reviewId, userId) => {
     review.likeBy = review.likeBy.filter(id => id.toString() !== userId.toString())
   } else {
     review.likeBy.push(userId)
+
+    // Tạo thông báo cho người viết review khi có người thích đánh giá của họ
+    if (review.userId.toString() !== userId.toString()) { // tránh tự like
+      await notificationService.createNew({
+        userId: review.userId, // người viết review
+        title: 'Đánh giá của bạn vừa được thích',
+        content: `Người dùng ${userId} đã thích đánh giá của bạn.`,
+        type: 'review:liked',
+        referenceId: review._id
+      })
+    }
   }
 
   review.totalLikes = review.likeBy.length
@@ -159,6 +192,16 @@ const reportReview = async (reviewId, userId, reportReason) => {
 
     review.reports.push({ userId, reason: reportReason })
     await review.save()
+
+    // Tạo thông báo cho admin về đánh giá bị báo cáo
+    await notificationService.createNew({
+      userId: null, // thông báo chung cho admin
+      role: 'admin',
+      title: 'Có đánh giá bị báo cáo',
+      content: `Người dùng đã báo cáo đánh giá ${reviewId} với lý do: ${reportReason}`,
+      type: 'review:reported',
+      referenceId: review._id
+    })
     return { success: true, message: 'Báo cáo đã được gửi thành công.' }
   } catch (error) {
     throw error

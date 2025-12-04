@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "type": "module",
     "dev": "nodemon --exec babel-node ./src/app.js",
-    "start": "node ./dist/app.js", 
+    "start": "node ./dist/app.js",
     "build": "babel src -d dist"
   },
   "keywords": [],
@@ -15,10 +15,10 @@
   "license": "ISC",
   "dependencies": {
     "@babel/runtime": "^7.28.4",
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.13.2",
     "bcryptjs": "^3.0.2",
-    
     "cloudinary": "^1.41.3",
-
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dateformat": "^5.0.3",
@@ -40,7 +40,8 @@
     "slugify": "^1.6.6",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "vnpay": "^2.4.4"
+    "vnpay": "^2.4.4",
+    "weaviate-ts-client": "^2.2.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.28.3",
@@ -50,6 +51,7 @@
     "@babel/plugin-transform-runtime": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
     "babel-plugin-module-resolver": "^5.0.2",
+    "baseline-browser-mapping": "^2.8.32",
     "nodemon": "^3.1.10"
   }
 }
