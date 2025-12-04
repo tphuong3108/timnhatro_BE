@@ -10,7 +10,8 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 const APP_PORT = env.APP_PORT || 5050;
 
- 
+ console.log("▶ CLOUDINARY_URL:", process.env.CLOUDINARY_URL);
+
 
 // Lấy IP LAN tự động
 function getLocalIP() {

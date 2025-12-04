@@ -41,16 +41,21 @@ export const paymentService = {
         return { paymentUrl, orderId };
     },
 
-    async handleReturnUrl(query) {
+   async handleReturnUrl(query) {
+    try {
+        console.log("Query from VNPay:", query);
         const verify = vnpay.verifyReturnUrl(query);
-        console.log(verify);
+        console.log("Verify result:", verify);
+        
         const { vnp_TxnRef, vnp_ResponseCode, vnp_TransactionStatus } = query;
-
+        
         const payment = await Payment.findOne({ txnRef: vnp_TxnRef });
+        console.log("Payment found:", payment);
 
         if (!payment) {
             throw new Error("Không tìm thấy payment trong hệ thống");
         }
+        
         if (verify.isSuccess) {
             payment.status = "success";
         } else {
@@ -65,8 +70,14 @@ export const paymentService = {
         payment.payDate = query.vnp_PayDate;
         payment.secureHash = query.vnp_SecureHash;
 
+        console.log("Before save:", payment);
         await payment.save();
+        console.log("After save, status:", payment.status);
 
         return verify;
+    } catch (error) {
+        console.error("Error in handleReturnUrl:", error);
+        throw error;
     }
+}
 };
