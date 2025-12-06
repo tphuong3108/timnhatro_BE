@@ -27,18 +27,15 @@ const createNew = async (roomData, userId, ownerId) => {
       status: ownerId ? 'approved' : 'pending'
     })
     // Tạo thông báo cho host về đánh giá mới
-    await notificationService.createNew({
-      userId: null,
-      role: 'admin',
-      title: 'Có phòng mới cần duyệt',
-      message: `Một phòng mới vừa được tạo và chờ duyệt: ${newRoom.name}`,
-      metadata: {
-        roomId: newRoom._id,
-        createdBy: userId
-      },
-      type: 'room:new'
-    })
-    
+      await notificationService.createNew({
+        userId: null,
+        role: 'admin',
+        type: 'room:new',
+        referenceId: newRoom._id,
+        referenceType: "room",
+        title: 'Có phòng mới cần duyệt',
+        message: `Một phòng mới vừa được tạo và chờ duyệt: ${newRoom.name}`
+      })
     return newRoom
   } catch (error) {
     throw error
@@ -375,6 +372,8 @@ const updateRoom = async (roomId, updateData, userId, role) => {
           userId: null,
           role: 'admin',
           type: 'room:pending_review',
+          referenceId: room._id,
+          referenceType: "room",
           title: 'Phòng cần được duyệt lại',
           message: `Host đã cập nhật phòng "${room.name}".`
         })
@@ -453,13 +452,15 @@ const likeRoom = async (roomId, userId) => {
       isLiked = true    // => Đã thích
 
       // Tạo thông báo cho host khi có người thích phòng của họ
-      await notificationService.createNew({
-        userId: room.createdBy,
-        role: 'host',
-        type: 'room:liked',
-        title: 'Phòng của bạn được yêu thích',
-        message: `Một tenant đã thích phòng "${room.name}".`
-      })
+        await notificationService.createNew({
+          userId: room.createdBy,
+          role: 'host',
+          type: 'room:liked',
+          referenceId: room._id,
+          referenceType: "room",
+          title: 'Phòng của bạn được yêu thích',
+          message: `Một tenant đã thích phòng "${room.name}".`
+        })
     }
     await room.save()
     await room.updateTotalLikes()
@@ -561,6 +562,8 @@ const approveRoom = async (roomId, adminId, status) => {
     userId: room.createdBy,
     role: 'host',
     type: status === 'approved' ? 'room:approved' : 'room:rejected',
+    referenceId: room._id,
+    referenceType: "room",
     title: status === 'approved' ? 'Phòng đã được duyệt' : 'Phòng bị từ chối',
     message: `Phòng "${room.name}" đã được cập nhật trạng thái: ${status}.`
   })
@@ -880,13 +883,15 @@ const reportRoom = async (roomId, userId, reportReason) => {
     await room.save()
 
     // Tạo thông báo cho admin về phòng bị báo cáo
-    await notificationService.createNew({
-      userId: null,
-      role: 'admin',
-      type: 'room:reported',
-      title: 'Có báo cáo mới',
-      message: `Phòng "${room.name}" vừa bị báo cáo bởi người dùng.`
-    })
+      await notificationService.createNew({
+        userId: null,
+        role: 'admin',
+        type: 'room:reported',
+        referenceId: room._id,
+        referenceType: "room",
+        title: 'Có báo cáo mới',
+        message: `Phòng "${room.name}" vừa bị báo cáo bởi người dùng.`
+      })
 
     return {
       success: true,

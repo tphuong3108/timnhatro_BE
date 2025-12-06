@@ -45,9 +45,11 @@ export const chatService = {
     // Thông báo cho receiver về chat mới
     await notificationService.createNew({
       userId: receiverId,
-      title: "Bạn có chat mới",
-      content: `Bạn có một chat mới về phòng ${populatedChat.roomId.name}`,
       type: "chat:new",
+      referenceId: populatedChat._id,        
+      referenceType: "chat",
+      title: "Bạn có chat mới",
+      message: `Bạn có một chat mới về phòng ${populatedChat.roomId.name}`
     });
 
     return populatedChat;

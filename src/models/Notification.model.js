@@ -72,7 +72,7 @@ const notificationSchema = new mongoose.Schema(
 
     referenceType: {
       type: String,
-      enum: ['booking', 'room', 'review', 'payment', 'user'],
+      enum: ['booking', 'room', 'review', 'payment', 'user', 'chat'],
       default: null
     },
 
