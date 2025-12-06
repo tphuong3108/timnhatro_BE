@@ -35,4 +35,15 @@ export const messageController = {
       next(err);
     }
   },
+  async deleteMessages(req, res, next) {
+    try {
+      const { chatId } = req.params;
+      const userId = req.user.id;
+
+      const result = await messageService.deleteMessagesByChat(chatId, userId);
+      res.status(StatusCodes.OK).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
 };
