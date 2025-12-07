@@ -794,13 +794,24 @@ const getHotRooms = async () => {
       },
       {
         $addFields: {
-          favoriteCount: { $size: { $ifNull: ['$favorites', []] } }
+          favoriteCount: { $size: { $ifNull: ["$favorites", []] } },
+          hotScore: {
+            $add: [
+              { $multiply: [{ $ifNull: ["$avgRating", 0] }, 10] },
+              { $multiply: [{ $ifNull: ["$totalLikes", 0] }, 2] },
+              { $ifNull: ["$viewCount", 0] }
+            ]
+          }
         }
       },
       {
-        // Sắp xếp theo: rating cao → favorite nhiều → like nhiều
-        $sort: { avgRating: -1, favoriteCount: -1, totalLikes: -1 }
-      },      
+        $sort: {
+          hotScore: -1 ,
+          avgRating: -1, 
+          totalLikes: -1, 
+          viewCount: -1          
+        }
+      },
       {
         $project: {
           _id: 0,
