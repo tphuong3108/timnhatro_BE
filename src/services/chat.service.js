@@ -1,5 +1,6 @@
 import Chat from "../models/Chat.model.js";
 import { notificationService } from "./notification.service.js";
+import Message from "../models/Message.model.js";
 
 export const chatService = {
   async getChatsByUser(userId) {
@@ -45,9 +46,11 @@ export const chatService = {
     // Thông báo cho receiver về chat mới
     await notificationService.createNew({
       userId: receiverId,
-      title: "Bạn có chat mới",
-      content: `Bạn có một chat mới về phòng ${populatedChat.roomId.name}`,
       type: "chat:new",
+      referenceId: populatedChat._id,        
+      referenceType: "chat",
+      title: "Bạn có chat mới",
+      message: `Bạn có một chat mới về phòng ${populatedChat.roomId.name}`
     });
 
     return populatedChat;
@@ -59,4 +62,21 @@ export const chatService = {
       { new: true }
     );
   },
+  async deleteChat(chatId, userId) {
+    const chat = await Chat.findById(chatId);
+    if (!chat) throw new Error("Chat not found");
+
+    const isParticipant = chat.participants.some(
+      (p) => String(p) === String(userId)
+    );
+    if (!isParticipant) throw new Error("Not allowed to delete this chat");
+
+    // Delete messages belonging to this chat
+    await Message.deleteMany({ chatId });
+
+    // Delete the chat itself
+    await Chat.findByIdAndDelete(chatId);
+
+    return { success: true };
+  }
 };

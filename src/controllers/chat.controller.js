@@ -2,7 +2,7 @@ import { chatService } from "../services/chat.service.js";
 import { StatusCodes } from "http-status-codes";
 
 export const chatController = {
-  // GET ALL CHATS OF USER
+
   async getUserChats(req, res, next) {
     try {
       const userId = req.user.id;
@@ -14,7 +14,6 @@ export const chatController = {
     }
   },
 
-  // CREATE OR GET CHAT
   async createOrGetChat(req, res, next) {
     try {
       const senderId = req.user.id;
@@ -38,4 +37,15 @@ export const chatController = {
       next(err);
     }
   },
+  async deleteChat(req, res, next) {
+    try {
+      const chatId = req.params.id;
+      const userId = req.user.id;
+
+      const result = await chatService.deleteChat(chatId, userId);
+      res.status(StatusCodes.OK).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
 };

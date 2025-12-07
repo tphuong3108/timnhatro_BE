@@ -62,6 +62,8 @@ export const bookingService = {
       title: "Có booking mới",
       content: `Người dùng đã đặt phòng ${room.name} vào ${date} lúc ${time}`,
       type: "booking:new",
+      referenceId: booking._id,    
+      referenceType: "booking", 
     });
 
     // Thông báo cho user
@@ -70,6 +72,8 @@ export const bookingService = {
       title: "Booking đã được tạo",
       content: `Bạn đã đặt phòng ${room.name} vào ${date} lúc ${time}. Chờ host duyệt.`,
       type: "booking:created",
+      referenceId: booking._id,  
+      referenceType: "booking",
     });
 
     return booking;
