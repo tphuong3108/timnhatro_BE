@@ -9,10 +9,11 @@ import { initWeaviate } from "./services/vector.service.js";
 import { setupChatSocket } from "~/sockets/chat.socket.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import path from "path";
 const APP_PORT = env.APP_PORT || 5050;
 
  
-
+const __dirname = path.resolve();
 // Lấy IP LAN tự động
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
@@ -40,7 +41,7 @@ const START_SERVER = async () => {
   app.use("/api/hosts", APIs);
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-
+  app.use(express.static(path.join(__dirname, "public")));
 
   app.use("/api", APIs);
   app.use(errorHandler);
