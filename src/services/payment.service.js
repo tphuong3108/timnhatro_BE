@@ -10,7 +10,6 @@ export const paymentService = {
     const { roomId, durationDays } = req.body;
     const userId = req.user.id;
 
-    // Kiểm tra phòng có tồn tại & thuộc về user
     const room = await RoomModel.findOne({ _id: roomId, createdBy: userId });
     if (!room) throw new Error("Phòng không tồn tại");
 
@@ -33,8 +32,6 @@ export const paymentService = {
       vnp_CurrCode: "VND",
       vnp_CreateDate: dateFormat(new Date()),
     });
-
-    // Lưu payment vào DB
     await Payment.create({
       orderId,
       txnRef: orderId,

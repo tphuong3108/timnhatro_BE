@@ -39,7 +39,7 @@ export const paymentController = {
       }
 
       return res.json({
-        status: payment.status,     // pending / success / failed
+        status: payment.status,
         orderId: payment.orderId,
         type: payment.type,
         amount: payment.amount,
@@ -47,6 +47,51 @@ export const paymentController = {
 
     } catch (error) {
       console.error("Lỗi check trạng thái:", error);
+      return res.status(500).json({ message: "Lỗi hệ thống" });
+    }
+  },
+  async getHostPaymentHistory(req, res) {
+    try {
+      const userId = req.user.id;
+      const { status } = req.query;
+
+      const filter = { userId };
+
+      if (status) filter.status = status;
+
+      const payments = await Payment.find(filter)
+        .populate("roomId", "name address isPremium premiumUntil")
+        .sort({ createdAt: -1 });
+
+      return res.json({
+        success: true,
+        data: payments
+      });
+
+    } catch (error) {
+      console.error("Lỗi lọc lịch sử giao dịch host:", error);
+      return res.status(500).json({ message: "Lỗi hệ thống" });
+    }
+  },
+  async getAdminPaymentHistory(req, res) {
+    try {
+      const { status } = req.query;
+
+      const filter = {};
+      if (status) filter.status = status;
+
+      const payments = await Payment.find(filter)
+        .populate("userId", "fullName email phoneNumber")
+        .populate("roomId", "name address")
+        .sort({ createdAt: -1 });
+
+      return res.json({
+        success: true,
+        data: payments
+      });
+
+    } catch (error) {
+      console.error("Lỗi lọc lịch sử giao dịch admin:", error);
       return res.status(500).json({ message: "Lỗi hệ thống" });
     }
   }

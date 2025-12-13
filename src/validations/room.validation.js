@@ -127,7 +127,11 @@ const updateRoomValidate = async (req, res, next) => {
       'number.base': 'price must be a number',
       'number.min': 'price must be at least 0'
     }).optional(),
-
+    description: Joi.string().min(10).max(1000).messages({
+    'string.base': 'description must be a string',
+    'string.min': 'description must be at least 10 characters',
+    'string.max': 'description must be at most 1000 characters'
+  }).optional(),
     amenities: Joi.array().items(
       Joi.string().pattern(OBJECT_ID_RULE).messages({
         'string.pattern.base': OBJECT_ID_RULE_MESSAGE

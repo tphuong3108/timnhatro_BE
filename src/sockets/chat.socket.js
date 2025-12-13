@@ -16,18 +16,15 @@ export const setupChatSocket = (io) => {
         const { chatId, senderId, content, images } = data;
         if (!chatId || !senderId) return;
 
-        // Persist message to DB
+        
         const message = await messageService.sendMessageWithChatId({
           chatId,
           senderId,
           content: content || "",
           images: images || [],
         });
-
-        // Update chat.lastMessage
         await chatService.updateLastMessage(chatId, message._id);
 
-        // Emit the saved (and populated) message to all room participants
         io.to(chatId.toString()).emit("receiveMessage", message);
       } catch (err) {
         console.error("Socket sendMessage error:", err);

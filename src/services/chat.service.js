@@ -71,7 +71,6 @@ export const chatService = {
     );
     if (!isParticipant) throw new Error("Not allowed to delete this chat");
 
-    // Delete messages belonging to this chat
     await Message.deleteMany({ chatId });
 
     // Delete the chat itself

@@ -27,14 +27,20 @@ const PaymentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'rooms' 
         },
+      userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+      required: true
+    },
+
     type: {
       type: String,
-      enum: ['booking', 'premium'],  // booking = đặt phòng, premium = nâng cấp
+      enum: ['booking', 'premium'],
       default: 'booking'
     },
     premiumDuration: { 
       type: Number, 
-      default: null // Số ngày nâng cấp nếu là payment loại premium
+      default: null
     }
   },
   { timestamps: true }

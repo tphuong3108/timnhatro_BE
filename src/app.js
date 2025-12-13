@@ -32,7 +32,7 @@ const START_SERVER = async () => {
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: {
-      origin: "*", // có thể cấu hình lại domain FE sau này
+      origin: "*",
     },
   });
   app.set("io", io);
