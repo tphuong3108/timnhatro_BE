@@ -19,7 +19,7 @@ const roomSchema = new mongoose.Schema({
     required: true,
     trim: true,
     minlength: 10,
-    maxlength: 500
+    maxlength: 3000
   },
   price: {
     type: Number,
@@ -156,7 +156,7 @@ const roomSchema = new mongoose.Schema({
   },
   premiumUntil: {
     type: Date,
-    default: null  // Hết hạn premium khi nào
+    default: null 
   },
   premiumPaymentId: {
     type: mongoose.Schema.Types.ObjectId,

@@ -1,15 +1,25 @@
 import Message from "../models/Message.model.js";
 import Chat from "../models/Chat.model.js";
+import User from "../models/User.model.js";
 import { notificationService } from "./notification.service.js";
+import mongoose from "mongoose";
 
 export const messageService = {
+
   async sendMessageWithChatId({ chatId, senderId, content = "", images = [] }) {
     if (!chatId || !senderId) {
       throw new Error("Missing chatId or senderId");
     }
 
-    const chat = await Chat.findById(chatId);
+    const chat = await Chat.findById(chatId).populate(
+      "participants",
+      "firstName lastName avatar"
+    );
+
     if (!chat) throw new Error("Chat does not exist");
+
+    // Ép senderId thành ObjectId để so sánh
+    const senderObjectId = new mongoose.Types.ObjectId(senderId);
 
     const message = await Message.create({
       chatId,
@@ -18,22 +28,40 @@ export const messageService = {
       images,
       type: images.length > 0 ? "image" : "text",
     });
+
     await Chat.findByIdAndUpdate(chatId, { lastMessage: message._id });
 
-     // Gửi thông báo cho tất cả participants ngoại trừ sender
-    const receivers = chat.participants.filter(p => p._id.toString() !== senderId.toString());
+    // sender trong participants
+    const sender = chat.participants.find((p) =>
+      p._id.equals(senderObjectId)
+    );
+
+    if (!sender) {
+      console.error("⚠ Sender not found in chat participants:", senderId);
+    }
+
+    const receivers = chat.participants.filter(
+      (p) => !p._id.equals(senderObjectId)
+    );
+
     for (const receiver of receivers) {
       await notificationService.createNew({
         userId: receiver._id,
-        title: "Tin nhắn mới",
-        content: content
-          ? `Bạn có tin nhắn mới từ ${chat.participants.find(p => p._id.toString() === senderId.toString()).firstName}`
-          : "Bạn có tin nhắn mới",
         type: "chat:message",
+
+        referenceId: chatId,
+        referenceType: "chat",
+
+        title: "Tin nhắn mới",
+        message: sender
+          ? `Bạn có tin nhắn mới từ ${sender.firstName} ${sender.lastName}`
+          : "Bạn có tin nhắn mới",
       });
     }
+
     return message.populate("sender", "firstName lastName avatar");
   },
+
   async getMessages(chatId) {
     const chat = await Chat.findById(chatId).populate(
       "roomId",
@@ -48,6 +76,7 @@ export const messageService = {
 
     return { room: chat.roomId, messages };
   },
+
   async markAsSeen(chatId, userId) {
     await Message.updateMany(
       { chatId, seenBy: { $ne: userId } },

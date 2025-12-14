@@ -18,11 +18,11 @@ const createNew = async (req, res, next) => {
       'string.min': 'name must be at least 3 characters long',
       'string.max': 'name must be at most 100 characters long'
     }),
-    description: Joi.string().min(10).max(500).required().messages({
+    description: Joi.string().min(10).max(3000).required().messages({
       'string.base': 'description must be a string',
       'string.empty': 'description cannot be empty',
       'string.min': 'description must be at least 10 characters long',
-      'string.max': 'description must be at most 500 characters long'
+      'string.max': 'description must be at most 3000 characters long'
     }),
     price: Joi.number().min(0).required().messages({
       'number.base': 'price must be a number',

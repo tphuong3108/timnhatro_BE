@@ -29,12 +29,12 @@ const PaymentSchema = new mongoose.Schema(
         },
     type: {
       type: String,
-      enum: ['booking', 'premium'],  // booking = đặt phòng, premium = nâng cấp
+      enum: ['booking', 'premium'],  
       default: 'booking'
     },
     premiumDuration: { 
       type: Number, 
-      default: null // Số ngày nâng cấp nếu là payment loại premium
+      default: null 
     }
   },
   { timestamps: true }
