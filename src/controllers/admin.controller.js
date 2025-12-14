@@ -105,6 +105,19 @@ const getFilteredReviews = async (req, res, next) => {
   }
 }
 
+const getReviewReports = async (req, res, next) => {
+  try {
+    const reviews = await adminService.getReviewReports()
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Thống kê báo cáo đánh giá thành công',
+      data: reviews
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const deleteReview = async (req, res, next) => {
   try {
     const { id } = req.params
@@ -220,6 +233,7 @@ export const adminController = {
   getLoginStats,
   getUserMonthlyStats,
   getTopHosts,
+  getReviewReports,
   getReportStats,
   processReports,
   getTopAmenities,

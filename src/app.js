@@ -49,7 +49,7 @@ const START_SERVER = async () => {
   httpServer.listen(APP_PORT, "0.0.0.0", () => {
     const localIP = getLocalIP();
     console.log("=========================================");
-    console.log(`🚀 Server đang chạy tại:`);
+    console.log(`Server đang chạy tại:`);
     console.log(` Local:     http://localhost:${APP_PORT}`);
     console.log(` Network:   http://${localIP}:${APP_PORT}`);
     console.log("=========================================");

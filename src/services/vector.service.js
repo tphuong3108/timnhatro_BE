@@ -1,4 +1,4 @@
-import weaviate from "weaviate-ts-client";
+import weaviate from 'weaviate-ts-client';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import RoomModel from "~/models/Room.model.js";
 

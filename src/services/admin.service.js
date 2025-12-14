@@ -499,6 +499,15 @@ const getReportsStats = async () => {
   }
 };
 
+const getReviewReports = async () => {
+  try {
+    const { reportedReviews } = await getReportsStats()
+    return reportedReviews
+  } catch (error) {
+    throw error
+  }
+}
+
 
 const handleReports = async () => {
   try {
@@ -704,6 +713,7 @@ export const adminService = {
   getUserMonthlyStats,
   getTopHosts,
   getReportsStats,
+  getReviewReports,
   handleReports,
   getTopAmenities,
   getTopWards,
