@@ -3,25 +3,24 @@ import { chatService } from "../services/chat.service.js";
 
 export const setupChatSocket = (io) => {
   io.on("connection", (socket) => {
-    console.log("⚡ Client connected:", socket.id);
+    console.log("Client connected:", socket.id);
 
     socket.on("joinChat", (chatId) => {
       if (!chatId) return;
       socket.join(chatId.toString());
     });
 
-
     socket.on("sendMessage", async (data) => {
       try {
         const { chatId, senderId, content, images } = data;
         if (!chatId || !senderId) return;
 
-        
         const message = await messageService.sendMessageWithChatId({
           chatId,
-          senderId,
-          content: content || "",
-          images: images || [],
+          sender: { _id: senderId },
+          receiverId,
+          content,
+          createdAt: createdAt || new Date(),
         });
         await chatService.updateLastMessage(chatId, message._id);
 
@@ -47,7 +46,7 @@ export const setupChatSocket = (io) => {
     });
 
     socket.on("disconnect", () => {
-      console.log("🔌 Client disconnected:", socket.id);
+      console.log("Client disconnected:", socket.id);
     });
   });
 };
