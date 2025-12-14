@@ -44,6 +44,7 @@ Router.patch('/rooms/:id/coordinates', verifyToken, verifyAdmin, roomValidation.
 Router.delete('/rooms/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, roomController.destroyRoom)
 
 Router.get('/reviews', verifyToken, verifyAdmin, adminValidation.getFilteredReviews, adminController.getFilteredReviews)
+Router.get('/reviews/reports', verifyToken, verifyAdmin, adminController.getReviewReports)
 Router.delete('/reviews/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, adminController.deleteReview)
 Router.put('/reviews/:id', verifyToken, verifyAdmin, generalValidation.paramIdValidate, adminController.hideReview)
 

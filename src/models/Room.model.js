@@ -150,6 +150,18 @@ const roomSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },isPremium: {
+  type: Boolean,
+  default: false
+  },
+  premiumUntil: {
+    type: Date,
+    default: null 
+  },
+  premiumPaymentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Payment',  
+    default: null
   }
 }, {
   timestamps: true,

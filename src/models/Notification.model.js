@@ -37,6 +37,7 @@ const notificationSchema = new mongoose.Schema(
         'room:rejected',
         'room:hidden',
         'room:liked',
+        'room:premium_activated',
 
         // Booking
         'booking:new',

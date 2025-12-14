@@ -42,20 +42,53 @@ const createNew = async (roomData, userId, ownerId) => {
   }
 }
 
+const updateExpiredPremium = async () => {
+  try {
+    const now = new Date()
+    await RoomModel.updateMany(
+      { isPremium: true, premiumUntil: { $lt: now } },
+      { isPremium: false, premiumUntil: null }
+    )
+  } catch (error) {
+    console.error('Error updating expired premium rooms:', error)
+  }
+}
+
 const getApprovedRooms = async (queryParams) => {
   try {
+    // Cập nhật phòng hết hạn premium trước khi fetch
+    await updateExpiredPremium()
+
     const sortByMapping = {
       // location: 'location',
       latest: 'createdAt',
-      rating: 'avgRating'
+      rating: 'avgRating',
+      premium: 'isPremium'
     }
     const page = parseInt(queryParams.page, 10) || 1
     const limit = parseInt(queryParams.limit, 10) || 10
     const startIndex = (page - 1) * limit
 
-    const sortBy = queryParams.sortBy || 'createdAt'
-    const sortOrder = queryParams.sortOrder === 'desc' ? -1 : 1
-    const rooms = await RoomModel.find({ status: 'approved' })
+    const sortBy = queryParams.sortBy || 'latest'
+
+    // Xây dựng sortOrder
+    let sortOrder = {}
+    if (sortBy === 'premium') {
+      // Sắp xếp: premium rooms trước, sau đó theo ngày tạo
+      sortOrder = {
+        isPremium: -1,
+        premiumUntil: -1,
+        createdAt: queryParams.sortOrder === 'desc' ? -1 : 1
+      }
+    } else {
+      // Sắp xếp thông thường nhưng vẫn ưu tiên premium trước
+      sortOrder = {
+        isPremium: -1,
+        [sortByMapping[sortBy] || 'createdAt']: queryParams.sortOrder === 'desc' ? -1 : 1
+      }
+    }
+
+    const rooms = await RoomModel.find({ status: 'approved', isDeleted: false })
       .populate({
         path: 'amenities',
         select: 'name icon'
@@ -64,12 +97,12 @@ const getApprovedRooms = async (queryParams) => {
         path: 'ward',
         select: 'name'
       })
-      .sort({ [sortByMapping[sortBy]]: sortOrder })
+      .sort(sortOrder)
       .skip(startIndex)
       .limit(limit)
-      .select('name slug address avgRating images')
+      .select('name slug address avgRating images isPremium premiumUntil')
 
-    const total = await RoomModel.countDocuments({ status: 'approved' })
+    const total = await RoomModel.countDocuments({ status: 'approved', isDeleted: false })
 
     const returnRooms = {
       rooms,
@@ -198,7 +231,7 @@ const getAllRoomsForAdmin = async (queryParams) => {
       isDeleted: false
     }
 
-  let roomsQuery = RoomModel.find(filter)
+    let roomsQuery = RoomModel.find(filter)
       .populate({ path: 'amenities', select: 'name icon' })
       .populate({ path: 'ward', select: 'name' })
       .sort({ [sortByMapping[sortBy] || 'createdAt']: sortOrder })
@@ -228,7 +261,7 @@ const getAllRoomsForAdmin = async (queryParams) => {
   } catch (error) {
     throw error
   }
-  
+
 }
 const getHostRooms = async (hostId, queryParams) => {
   try {
@@ -356,11 +389,11 @@ const updateRoom = async (roomId, updateData, userId, role) => {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Phòng này đã bị xóa, không thể chỉnh sửa')
     }
 
-    
+
     if (room.createdBy.toString() !== userId.toString()) {
       throw new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền sửa phòng này.')
     }
-      
+
     if (role === 'host') {
       // Nếu là host và phòng đã được duyệt → đổi lại thành pending để admin kiểm duyệt lại
       if (room.status === 'approved') {
@@ -723,11 +756,11 @@ const getNearbyRooms = async (queryParams) => {
           address: 1,
           avgRating: 1,
           totalRatings: 1,
-          totalLikes: 1, 
-          viewCount: 1,   
+          totalLikes: 1,
+          viewCount: 1,
           images: 1,
           location: 1,
-          distance: 1,  
+          distance: 1,
           amenities: { name: 1, icon: 1 },
         },
       },
@@ -921,6 +954,28 @@ const getRoomsByWard = async (wardId) => {
   }
 }
 
+const checkPremiumStatus = async (roomId) => {
+  try {
+    const room = await RoomModel.findById(roomId)
+      .select('isPremium premiumUntil')
+
+    if (!room) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Không tìm thấy phòng')
+    }
+
+    // Kiểm tra nếu premium đã hết hạn
+    if (room.isPremium && room.premiumUntil && new Date() > new Date(room.premiumUntil)) {
+      room.isPremium = false
+      room.premiumUntil = null
+      await room.save()
+    }
+
+    return room
+  } catch (error) {
+    throw error
+  }
+}
+
 export const roomService = {
   createNew,
   getAllRooms,
@@ -947,5 +1002,7 @@ export const roomService = {
   getHotRooms,
   reportRoom,
   getRoomsByWard,
+  updateExpiredPremium,
+  checkPremiumStatus,
 }
 

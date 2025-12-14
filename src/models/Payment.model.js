@@ -23,6 +23,19 @@ const PaymentSchema = new mongoose.Schema(
       enum: ["pending", "success", "failed"],
       default: "pending",
     },
+    roomId: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'rooms' 
+        },
+    type: {
+      type: String,
+      enum: ['booking', 'premium'],  
+      default: 'booking'
+    },
+    premiumDuration: { 
+      type: Number, 
+      default: null 
+    }
   },
   { timestamps: true }
 );

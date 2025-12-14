@@ -41,7 +41,21 @@ const createNew = async (req, res, next) => {
     res.status(500).json({ message: "Something went wrong!", error });
   }
 };
-
+const checkRoomPremiumStatus = async (req, res, next) => {
+  try {
+    const roomId = req.params.id;
+    const room = await roomService.checkPremiumStatus(roomId);
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: {
+        isPremium: room.isPremium,
+        premiumUntil: room.premiumUntil
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const getAllRooms = async (req, res, next) => {
   try {
@@ -384,4 +398,5 @@ export const roomController = {
   getHotRooms,
   reportRoom,
   getRoomsByWard,
+  checkRoomPremiumStatus
 }
