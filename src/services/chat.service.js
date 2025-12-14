@@ -1,5 +1,6 @@
 import Chat from "../models/Chat.model.js";
 import { notificationService } from "./notification.service.js";
+import Message from "../models/Message.model.js";
 
 export const chatService = {
   async getChatsByUser(userId) {
@@ -61,4 +62,20 @@ export const chatService = {
       { new: true }
     );
   },
+  async deleteChat(chatId, userId) {
+    const chat = await Chat.findById(chatId);
+    if (!chat) throw new Error("Chat not found");
+
+    const isParticipant = chat.participants.some(
+      (p) => String(p) === String(userId)
+    );
+    if (!isParticipant) throw new Error("Not allowed to delete this chat");
+
+    await Message.deleteMany({ chatId });
+
+    // Delete the chat itself
+    await Chat.findByIdAndDelete(chatId);
+
+    return { success: true };
+  }
 };

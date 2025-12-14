@@ -17,6 +17,19 @@ export const messageService = {
     );
 
     if (!chat) throw new Error("Chat does not exist");
+ 
+    const lastMessage = await Message.findOne({ chatId }).sort({ createdAt: -1 });
+    if (lastMessage) {
+      const sameSender = String(lastMessage.sender) === String(senderId);
+      const sameContent = (lastMessage.content || "") === (content || "");
+      const withinWindow = (Date.now() - new Date(lastMessage.createdAt).getTime()) <= 5000; // 5s
+      const sameImages = JSON.stringify(lastMessage.images || []) === JSON.stringify(images || []);
+
+      if (sameSender && sameContent && sameImages && withinWindow) {
+       
+        return lastMessage.populate("sender", "firstName lastName avatar");
+      }
+    }
 
     // Ép senderId thành ObjectId để so sánh
     const senderObjectId = new mongoose.Types.ObjectId(senderId);
@@ -83,4 +96,19 @@ export const messageService = {
       { $push: { seenBy: userId } }
     );
   },
+  async deleteMessagesByChat(chatId, userId) {
+    const chat = await Chat.findById(chatId);
+    if (!chat) throw new Error("Chat not found");
+
+    const isParticipant = chat.participants.some(
+      (p) => String(p) === String(userId)
+    );
+    if (!isParticipant) throw new Error("Not allowed to delete messages of this chat");
+
+    await Message.deleteMany({ chatId });
+
+    await Chat.findByIdAndUpdate(chatId, { lastMessage: null });
+
+    return { success: true };
+  }
 };

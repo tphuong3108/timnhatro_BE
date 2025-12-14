@@ -27,14 +27,20 @@ const PaymentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'rooms' 
         },
+      userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+      required: true
+    },
+
     type: {
       type: String,
-      enum: ['booking', 'premium'],  
+      enum: ['booking', 'premium'],
       default: 'booking'
     },
     premiumDuration: { 
       type: Number, 
-      default: null 
+      default: null
     }
   },
   { timestamps: true }

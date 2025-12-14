@@ -415,7 +415,6 @@ const updateRoom = async (roomId, updateData, userId, role) => {
 
     Object.assign(room, updateData)
     room.updatedAt = new Date()
-
     await room.save()
     return room
   } catch (error) {
