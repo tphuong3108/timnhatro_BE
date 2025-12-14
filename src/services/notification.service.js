@@ -134,7 +134,6 @@ const getNotificationsByUser = async (userId) => {
   }
 };
 
-
 /**
  * Lấy thông báo chung cho admin
  * userId = null → thông báo dùng chung
@@ -142,16 +141,52 @@ const getNotificationsByUser = async (userId) => {
 const getNotificationsForAdmin = async () => {
   try {
     const notifications = await NotificationModel.find({
-      userId: null,
+      userId: null, 
       role: 'admin',
       isDeleted: false
-    }).sort({ createdAt: -1 })
+    })
+      .sort({ createdAt: -1 })
+      .lean(); 
 
-    return notifications
+    const populatedNotifications = await Promise.all(
+      notifications.map(async (n) => {
+        let actionPath = null; 
+        if (n.referenceType === "room" && n.referenceId) {
+          const room = await RoomModel.findById(n.referenceId)
+            .select("_id slug images thumbnail status")
+            .lean(); 
+
+          if (n.type === 'room:new' || n.type === 'room:pending' || n.type?.startsWith('room:reported')) {
+             actionPath = '/admin/posts'; 
+          }
+          
+          return {
+            ...n,
+            postId: room?._id,
+            slug: room?.slug,
+            avatar: room?.thumbnail || room?.images?.[0] || null, 
+            roomImages: room?.images || [],
+            iconType: "room",
+            actionPath: actionPath,
+            referenceStatus: room?.status,
+          };
+        }
+                
+        if (n.type === 'review:new') {
+        }
+        if (n.type === 'room:pending_review') {
+            actionPath = '/admin/posts'; 
+        }
+
+        return { ...n, iconType: "default", actionPath: actionPath };
+      })
+    );
+
+    return populatedNotifications;
   } catch (error) {
-    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message)
+    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message);
   }
-}
+};
 
 /**
  * Đánh dấu thông báo đã đọc
