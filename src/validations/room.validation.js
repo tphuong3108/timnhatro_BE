@@ -18,11 +18,11 @@ const createNew = async (req, res, next) => {
       'string.min': 'name must be at least 3 characters long',
       'string.max': 'name must be at most 100 characters long'
     }),
-    description: Joi.string().min(10).max(500).required().messages({
+    description: Joi.string().min(10).max(3000).required().messages({
       'string.base': 'description must be a string',
       'string.empty': 'description cannot be empty',
       'string.min': 'description must be at least 10 characters long',
-      'string.max': 'description must be at most 500 characters long'
+      'string.max': 'description must be at most 3000 characters long'
     }),
     price: Joi.number().min(0).required().messages({
       'number.base': 'price must be a number',
@@ -127,7 +127,11 @@ const updateRoomValidate = async (req, res, next) => {
       'number.base': 'price must be a number',
       'number.min': 'price must be at least 0'
     }).optional(),
-
+    description: Joi.string().min(10).max(1000).messages({
+    'string.base': 'description must be a string',
+    'string.min': 'description must be at least 10 characters',
+    'string.max': 'description must be at most 1000 characters'
+  }).optional(),
     amenities: Joi.array().items(
       Joi.string().pattern(OBJECT_ID_RULE).messages({
         'string.pattern.base': OBJECT_ID_RULE_MESSAGE
@@ -172,7 +176,7 @@ const updateRoomValidate = async (req, res, next) => {
     const roomIdData = req?.params || {}
     const data = req?.body ? req.body : {}
 
-     // Kết hợp images từ req.body và req.files
+    // Kết hợp images từ req.body và req.files
     const filesImages = req.files?.images?.map(f => f.path) || []
     if (data.images) {
       data.images = Array.isArray(data.images) ? data.images.concat(filesImages) : [data.images, ...filesImages]
@@ -317,6 +321,29 @@ const reportRoom = async (req, res, next) => {
   }
 }
 
+const createPremiumPaymentValidate = async (req, res, next) => {
+  const premiumRule = Joi.object({
+    roomId: Joi.string().pattern(OBJECT_ID_RULE).required().messages({
+      'string.empty': 'roomId không được để trống',
+      'string.pattern.base': 'roomId không hợp lệ',
+      'any.required': 'roomId là trường bắt buộc'
+    }),
+    durationDays: Joi.number().integer().valid(30, 60, 90).required().messages({
+      'number.base': 'durationDays phải là số',
+      'any.only': 'Chỉ được chọn 30, 60 hoặc 90 ngày',
+      'any.required': 'durationDays là trường bắt buộc'
+    })
+  })
+
+  try {
+    const data = req?.body || {}
+    await premiumRule.validateAsync(data, { abortEarly: false })
+    next()
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
+  }
+}
+
 export const roomValidation = {
   createNew,
   updateRoomValidate,
@@ -325,5 +352,6 @@ export const roomValidation = {
   updateRoomCoordinates,
   searchValidate,
   nearbyRooms,
-  reportRoom
+  reportRoom,
+  createPremiumPaymentValidate
 }

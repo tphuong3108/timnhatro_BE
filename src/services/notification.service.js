@@ -2,6 +2,8 @@ import ApiError from '~/utils/ApiError'
 import { StatusCodes } from 'http-status-codes'
 import NotificationModel from '~/models/Notification.model.js'
 import UserModel from '~/models/User.model.js'
+import RoomModel from '~/models/Room.model.js'
+import BookingModel from "~/models/Booking.model.js";
 
 /**
  * Tạo thông báo mới
@@ -50,7 +52,7 @@ const createNew = async (data) => {
         review: 'review',
         payment: 'payment',
         account: 'user',
-        chat: null
+        chat: 'chat'
       }
       if (map[main]) payload.referenceType = map[main]
     }
@@ -76,16 +78,62 @@ const createNew = async (data) => {
  */
 const getNotificationsByUser = async (userId) => {
   try {
-    const notifications = await NotificationModel.find({
+    let notifications = await NotificationModel.find({
       userId,
       isDeleted: false
-    }).sort({ createdAt: -1 })
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+    const populated = await Promise.all(
+      notifications.map(async (n) => {
 
-    return notifications
+        if (n.type?.startsWith("chat:") && n.referenceType === "chat") {
+
+          return {
+            ...n,
+            chatId: n.referenceId, 
+            iconType: "chat",
+          };
+        }
+        if (n.referenceType === "booking" && n.referenceId) {
+          const booking = await BookingModel.findById(n.referenceId)
+            .populate("roomId", "_id slug images thumbnail")
+            .lean();
+
+            return {
+              ...n,
+              bookingId: booking?._id,
+              roomId: booking?.roomId?._id,
+              avatar:
+                booking?.roomId?.thumbnail ||
+                booking?.roomId?.images?.[0] ||
+                null,
+              iconType: "booking",
+            };
+        }
+
+        if (n.referenceType === "room" && n.referenceId) {
+          const room = await RoomModel.findById(n.referenceId)
+            .select("_id slug images thumbnail")
+            .lean();
+
+          return {
+            ...n,
+            postId: room?._id,
+            slug: room?.slug,
+            avatar: room?.thumbnail || room?.images?.[0] || null,
+            iconType: "room"
+          };
+        }
+        return { ...n, iconType: "default" };
+      })
+    );
+    return populated;
   } catch (error) {
-    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message)
+    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.message);
   }
-}
+};
+
 
 /**
  * Lấy thông báo chung cho admin

@@ -37,6 +37,7 @@ const notificationSchema = new mongoose.Schema(
         'room:rejected',
         'room:hidden',
         'room:liked',
+        'room:premium_activated',
 
         // Booking
         'booking:new',
@@ -72,7 +73,7 @@ const notificationSchema = new mongoose.Schema(
 
     referenceType: {
       type: String,
-      enum: ['booking', 'room', 'review', 'payment', 'user'],
+      enum: ['booking', 'room', 'review', 'payment', 'user', 'chat'],
       default: null
     },
 

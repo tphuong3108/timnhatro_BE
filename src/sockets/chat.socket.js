@@ -10,19 +10,22 @@ export const setupChatSocket = (io) => {
       socket.join(chatId.toString());
     });
 
-  
-    socket.on("sendMessage", (data) => {
-      try {
-        const { chatId, senderId, receiverId, content, createdAt } = data;
-        if (!chatId) return;
 
-        io.to(chatId.toString()).emit("receiveMessage", {
+    socket.on("sendMessage", async (data) => {
+      try {
+        const { chatId, senderId, content, images } = data;
+        if (!chatId || !senderId) return;
+
+        
+        const message = await messageService.sendMessageWithChatId({
           chatId,
-          sender: { _id: senderId },
-          receiverId,
-          content,
-          createdAt: createdAt || new Date(),
+          senderId,
+          content: content || "",
+          images: images || [],
         });
+        await chatService.updateLastMessage(chatId, message._id);
+
+        io.to(chatId.toString()).emit("receiveMessage", message);
       } catch (err) {
         console.error("Socket sendMessage error:", err);
       }

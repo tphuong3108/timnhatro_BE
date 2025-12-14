@@ -4,6 +4,7 @@ import { verifyToken } from "../middlewares/auth.middleware.js";
 const Router = express.Router();
 Router.use(verifyToken);
 Router.get("/:chatId", messageController.getMessages);
-Router.post("/",messageController.sendMessage);
+Router.post("/", messageController.sendMessage);
+Router.delete("/:chatId", messageController.deleteMessages);
 
 export const messageRoute = Router;

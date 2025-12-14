@@ -5,5 +5,6 @@ const Router = express.Router();
 Router.use(verifyToken);
 Router.get("/", chatController.getUserChats);
 Router.post("/", chatController.createOrGetChat);
+Router.delete("/:id", chatController.deleteChat);
 
 export const chatRoute = Router;

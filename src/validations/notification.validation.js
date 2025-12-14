@@ -32,6 +32,7 @@ const createNotificationValidate = async (req, res, next) => {
         'review:liked',
 
         // Room
+        'room:new',
         'room:reported',
         'room:banned',
         'room:pending_review',
@@ -77,7 +78,7 @@ const createNotificationValidate = async (req, res, next) => {
       }),
 
     referenceType: Joi.string()
-      .valid('booking', 'room', 'review', 'payment', 'user', null)
+      .valid('booking', 'room', 'review', 'payment', 'user')
       .allow(null),
 
     title: Joi.string()

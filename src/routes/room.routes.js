@@ -1,5 +1,5 @@
 import express from 'express'
-import { verifyToken, verifyRoles, verifyAdmin, verifyHost, verifyTokenOptional  } from '~/middlewares/auth.middleware.js'
+import { verifyToken, verifyRoles, verifyTokenOptional  } from '~/middlewares/auth.middleware.js'
 import { roomValidation } from '~/validations/room.validation.js'
 import { roomController } from '~/controllers/room.controller.js'
 import { generalValidation } from '~/validations/general.validation.js'
@@ -24,8 +24,8 @@ Router.get('/hot', roomController.getHotRooms)
 // Chi tiết phòng
 Router.get('/slug/:slug', generalValidation.paramSlugValidate, verifyTokenOptional, roomController.getRoomDetailsBySlug)
 Router.get('/:id', generalValidation.paramIdValidate, roomController.getRoomDetails)
-
-
+// lấy phòng thanh toán premium
+Router.get('/:id/premium-status', roomController.checkRoomPremiumStatus);
 // Like phòng
 Router.patch('/:id', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.likeRoom)
 
@@ -41,5 +41,15 @@ Router.post('/:id/report', verifyToken, verifyRoles('tenant', 'host'), generalVa
 // Lấy phòng theo phường/xã
 Router.get('/ward/:wardId', roomController.getRoomsByWard)
 
+// sửa phòng 
+// Cập nhật thông tin phòng
+Router.patch(
+  '/:id/update',
+  verifyToken,
+  verifyRoles('host', 'admin'),
+  generalValidation.paramIdValidate,
+  roomValidation.updateRoomValidate,
+  roomController.updateRoom
+)
 
 export const roomRoute = Router
