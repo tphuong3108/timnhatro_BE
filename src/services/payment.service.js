@@ -18,7 +18,6 @@ export const paymentService = {
     if (!amount) throw new Error("Thời gian nâng cấp không hợp lệ");
 
     const orderId = `PREMIUM_${roomId}_${Date.now()}`;
-
     const paymentUrl = vnpay.buildPaymentUrl({
       vnp_Amount: amount * 100,
       vnp_IpAddr: req.headers["x-forwarded-for"] || req.connection.remoteAddress,
