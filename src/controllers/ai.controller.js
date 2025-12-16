@@ -4,8 +4,8 @@ export const aiController = {
   chatWithAI: async (req, res) => {
     try {
       const { message } = req.body;
-      const reply = await aiService.sendMessage(message);
-      res.json({ reply });
+      const result = await aiService.sendMessage(message);
+      res.json(result);
     } catch (err) {
       res.status(500).send("Error: " + err.message);
     }

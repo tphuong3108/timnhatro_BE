@@ -30,6 +30,19 @@ ${amenitiesList ? `✨ Tiện ích: ${amenitiesList}` : ''}
     .join("\n\n---\n\n");
 }
 
+function buildRoomCards(rooms) {
+  return rooms.map(room => ({
+    _id: room._id,
+    name: room.name,
+    slug: room.slug,
+    address: room.address,
+    price: room.price,
+    image: room.images?.[0] || null,
+    amenities: room.amenities?.map(a => a.name) || [],
+    link: `/phong-tro/${room.slug}`
+  }));
+}
+
 const SYSTEM_PROMPT = `Bạn là trợ lý tìm phòng trọ thông minh của website TimNhaTro.
 
 NHIỆM VỤ: Giúp người dùng tìm phòng trọ phù hợp dựa trên dữ liệu thực tế.
@@ -140,6 +153,7 @@ export const aiService = {
       }
 
       const context = buildContext(rooms);
+      const roomCards = buildRoomCards(rooms);
       
       let userPrompt;
       
@@ -158,9 +172,17 @@ Hãy giới thiệu các phòng trên một cách thân thiện. Giữ nguyên l
 Hiện tại không có phòng trọ nào trong hệ thống. Hãy thông báo và gợi ý người dùng quay lại sau.`;
       }
 
-      return await callGroqAPI(SYSTEM_PROMPT, userPrompt);
+      const reply = await callGroqAPI(SYSTEM_PROMPT, userPrompt);
+      
+      return {
+        reply,
+        rooms: roomCards
+      };
     } catch (err) {
-      return "Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.";
+      return {
+        reply: "Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.",
+        rooms: []
+      };
     }
   },
 };
