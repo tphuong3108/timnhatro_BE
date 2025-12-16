@@ -12,10 +12,20 @@ export const weaviateController = {
 
   syncRooms: async (req, res) => {
     try {
-      await vectorService.upsertAllRooms();
-      res.send("Rooms synced!");
+      const result = await vectorService.upsertAllRooms();
+      res.json({ message: result });
     } catch (err) {
-      res.status(500).send("Error: " + err.message);
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  resetAndSync: async (req, res) => {
+    try {
+      await vectorService.resetRoomSchema();
+      const result = await vectorService.upsertAllRooms();
+      res.json({ message: "Schema reset thành công! " + result });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
   },
 };
