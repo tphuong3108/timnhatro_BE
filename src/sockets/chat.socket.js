@@ -15,12 +15,12 @@ export const setupChatSocket = (io) => {
         const { chatId, senderId, content, images } = data;
         if (!chatId || !senderId) return;
 
+        
         const message = await messageService.sendMessageWithChatId({
           chatId,
-          sender: { _id: senderId },
-          receiverId,
-          content,
-          createdAt: createdAt || new Date(),
+          senderId,
+          content: content || "",
+          images: images || [],
         });
         await chatService.updateLastMessage(chatId, message._id);
 
@@ -29,7 +29,6 @@ export const setupChatSocket = (io) => {
         console.error("Socket sendMessage error:", err);
       }
     });
-
     socket.on("markAsSeen", async ({ chatId, userId }) => {
       try {
         if (!chatId || !userId) return;
