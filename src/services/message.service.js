@@ -50,7 +50,7 @@ export const messageService = {
     );
 
     if (!sender) {
-      console.error("⚠ Sender not found in chat participants:", senderId);
+      console.error("Sender not found in chat participants:", senderId);
     }
 
     const receivers = chat.participants.filter(
