@@ -27,7 +27,7 @@ Router.get('/:id', generalValidation.paramIdValidate, roomController.getRoomDeta
 
 Router.get('/:id/premium-status', roomController.checkRoomPremiumStatus);
 // Like phòng
-Router.patch('/:id', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.likeRoom)
+Router.patch('/:id/like', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.likeRoom)
 
 // Thêm / xóa phòng khỏi yêu thích
 Router.post('/slug/:slug/favorite', verifyToken, verifyRoles('tenant', 'host'), roomController.addToFavorites);
