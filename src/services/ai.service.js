@@ -87,7 +87,6 @@ async function searchRoomsFromDB(query, limit = 5) {
 
     return rooms;
   } catch (error) {
-    console.error("MongoDB search error:", error.message);
     return [];
   }
 }
@@ -111,7 +110,6 @@ async function searchRoomsFromVector(query, limit = 5) {
 
     return rooms;
   } catch (error) {
-    console.error("Vector search error:", error.message);
     return [];
   }
 }
@@ -162,7 +160,6 @@ Hiện tại không có phòng trọ nào trong hệ thống. Hãy thông báo v
 
       return await callGroqAPI(SYSTEM_PROMPT, userPrompt);
     } catch (err) {
-      console.error("AI Service Error:", err.message);
       return "Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.";
     }
   },

@@ -6,6 +6,7 @@ const Router = express.Router();
 
 Router.get("/init", weaviateController.initSchema);
 Router.get("/sync", weaviateController.syncRooms);
+Router.get("/reset", weaviateController.resetAndSync);
 
 Router.post("/chat", aiController.chatWithAI);
 
