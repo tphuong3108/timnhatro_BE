@@ -27,15 +27,15 @@ const createNew = async (roomData, userId, ownerId) => {
       status: ownerId ? 'approved' : 'pending'
     })
     // Tạo thông báo cho host về đánh giá mới
-      await notificationService.createNew({
-        userId: null,
-        role: 'admin',
-        type: 'room:new',
-        referenceId: newRoom._id,
-        referenceType: "room",
-        title: 'Có phòng mới cần duyệt',
-        message: `Một phòng mới vừa được tạo và chờ duyệt: ${newRoom.name}`
-      })
+    await notificationService.createNew({
+      userId: null,
+      role: 'admin',
+      type: 'room:new',
+      referenceId: newRoom._id,
+      referenceType: "room",
+      title: 'Có phòng mới cần duyệt',
+      message: `Một phòng mới vừa được tạo và chờ duyệt: ${newRoom.name}`
+    })
     return newRoom
   } catch (error) {
     throw error
@@ -484,15 +484,15 @@ const likeRoom = async (roomId, userId) => {
       isLiked = true    // => Đã thích
 
       // Tạo thông báo cho host khi có người thích phòng của họ
-        await notificationService.createNew({
-          userId: room.createdBy,
-          role: 'host',
-          type: 'room:liked',
-          referenceId: room._id,
-          referenceType: "room",
-          title: 'Phòng của bạn được yêu thích',
-          message: `Một tenant đã thích phòng "${room.name}".`
-        })
+      await notificationService.createNew({
+        userId: room.createdBy,
+        role: 'host',
+        type: 'room:liked',
+        referenceId: room._id,
+        referenceType: "room",
+        title: 'Phòng của bạn được yêu thích',
+        message: `Một tenant đã thích phòng "${room.name}".`
+      })
     }
     await room.save()
     await room.updateTotalLikes()
@@ -805,10 +805,10 @@ const getHotRooms = async () => {
       },
       {
         $sort: {
-          hotScore: -1 ,
-          avgRating: -1, 
-          totalLikes: -1, 
-          viewCount: -1          
+          hotScore: -1,
+          avgRating: -1,
+          totalLikes: -1,
+          viewCount: -1
         }
       },
       {
@@ -856,9 +856,9 @@ const getHotRooms = async () => {
       },
       {
         $sort: {
-          hotScore: -1 ,
-          avgRating: -1, 
-          totalLikes: -1, 
+          hotScore: -1,
+          avgRating: -1,
+          totalLikes: -1,
           viewCount: -1
         }
       },
@@ -877,7 +877,7 @@ const getHotRooms = async () => {
           viewCount: 1
         }
       },
-      { $limit: needed  }
+      { $limit: needed }
     ]);
 
     return [...weeklyRooms, ...fallbackRooms];
@@ -915,19 +915,59 @@ const reportRoom = async (roomId, userId, reportReason) => {
     await room.save()
 
     // Tạo thông báo cho admin về phòng bị báo cáo
-      await notificationService.createNew({
-        userId: null,
-        role: 'admin',
-        type: 'room:reported',
-        referenceId: room._id,
-        referenceType: "room",
-        title: 'Có báo cáo mới',
-        message: `Phòng "${room.name}" vừa bị báo cáo bởi người dùng.`
-      })
+    await notificationService.createNew({
+      userId: null,
+      role: 'admin',
+      type: 'room:reported',
+      referenceId: room._id,
+      referenceType: "room",
+      title: 'Có báo cáo mới',
+      message: `Phòng "${room.name}" vừa bị báo cáo bởi người dùng.`
+    })
 
     return {
       success: true,
       message: 'Báo cáo đã được gửi thành công.'
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
+const getPremiumRooms = async (queryParams) => {
+  try {
+    const page = parseInt(queryParams.page, 10) || 1
+    const limit = parseInt(queryParams.limit, 10) || 20
+    const startIndex = (page - 1) * limit
+
+    const now = new Date()
+
+    const filter = {
+      isPremium: true,
+      premiumUntil: { $gt: now },
+      status: 'approved',
+      isDeleted: false
+    }
+
+    const rooms = await RoomModel.find(filter)
+      .populate({ path: 'amenities', select: 'name icon' })
+      .populate({ path: 'ward', select: 'name' })
+      .populate({ path: 'createdBy', select: 'firstName lastName email avatar' })
+      .sort({ premiumUntil: -1, createdAt: -1 })
+      .skip(startIndex)
+      .limit(limit)
+      .select('name slug address price avgRating images isPremium premiumUntil premiumPaymentId')
+
+    const total = await RoomModel.countDocuments(filter)
+
+    return {
+      rooms,
+      pagination: {
+        total,
+        limit,
+        page,
+        totalPages: Math.ceil(total / limit)
+      }
     }
   } catch (error) {
     throw error
@@ -980,6 +1020,7 @@ export const roomService = {
   getAllRooms,
   getAllRoomsForAdmin,
   getHostRooms,
+  getPremiumRooms,
   getApprovedRooms,
   searchRooms,
   getRoomsMapdata,

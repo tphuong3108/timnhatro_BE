@@ -230,7 +230,7 @@ const likeRoom = async (req, res, next) => {
       message: isLiked
         ? 'Đã thích phòng thành công'
         : 'Đã bỏ thích phòng thành công',
-        data: { isLiked } 
+      data: { isLiked }
     })
   } catch (error) {
     next(error)
@@ -346,6 +346,18 @@ const getHotRooms = async (req, res, next) => {
   }
 }
 
+const getPremiumRooms = async (req, res, next) => {
+  try {
+    const premiumRooms = await roomService.getPremiumRooms(req.query)
+    res.status(StatusCodes.OK).json({
+      success: true,
+      data: premiumRooms
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const reportRoom = async (req, res, next) => {
   try {
     const { id } = req.params
@@ -396,6 +408,7 @@ export const roomController = {
   getRoomsMapdata,
   getNearbyRooms,
   getHotRooms,
+  getPremiumRooms,
   reportRoom,
   getRoomsByWard,
   checkRoomPremiumStatus
