@@ -1,5 +1,5 @@
 import express from 'express'
-import { verifyToken, verifyRoles, verifyTokenOptional  } from '~/middlewares/auth.middleware.js'
+import { verifyToken, verifyRoles, verifyTokenOptional } from '~/middlewares/auth.middleware.js'
 import { roomValidation } from '~/validations/room.validation.js'
 import { roomController } from '~/controllers/room.controller.js'
 import { generalValidation } from '~/validations/general.validation.js'
@@ -20,6 +20,8 @@ Router.get('/map-data', roomValidation.pagingValidate, roomController.getRoomsMa
 
 // Phòng nổi bật
 Router.get('/hot', roomController.getHotRooms)
+// Phòng premium
+Router.get('/premium', roomController.getPremiumRooms)
 
 // Chi tiết phòng
 Router.get('/slug/:slug', generalValidation.paramSlugValidate, verifyTokenOptional, roomController.getRoomDetailsBySlug)
