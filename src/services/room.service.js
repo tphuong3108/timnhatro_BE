@@ -673,37 +673,103 @@ const searchRooms = async (filterCriteria) => {
   try {
     const query = {};
 
+    // Tìm kiếm theo tên phòng
+    if (filterCriteria.name) {
+      query.name = { $regex: filterCriteria.name, $options: 'i' };
+    }
+
+    // Tìm kiếm theo amenity (tiện nghi) - hỗ trợ cả ObjectID và tên
     if (filterCriteria.amenity) {
       const amenities = Array.isArray(filterCriteria.amenity)
         ? filterCriteria.amenity
         : filterCriteria.amenity.split(',');
-      const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regexAmenities = amenities.map(a => new RegExp(escapeRegex(a.trim()), 'i'));
-      const amenityDocs = await AmenityModel.find({
-        name: { $in: regexAmenities }
-      }).select('_id');
-      if (amenityDocs.length > 0)
-        query.amenities = { $in: amenityDocs.map(a => a._id) };
-    }
-
-    if (filterCriteria.address) {
-      query.address = { $regex: filterCriteria.address, $options: 'i' } // Case-insensitive search
-    }
-    if (filterCriteria.ward) {
-      const wards = await WardModel.find({ name: { $regex: filterCriteria.ward, $options: 'i' } }).select('_id')
-      if (wards.length > 0) {
-        query.ward = { $in: wards.map(w => w._id) }
+      
+      const amenityIds = [];
+      
+      for (const amenity of amenities) {
+        const trimmed = amenity.trim();
+        // Kiểm tra nếu là ObjectID hợp lệ (24 ký tự hex)
+        if (/^[0-9a-fA-F]{24}$/.test(trimmed)) {
+          // Là ObjectID - sử dụng trực tiếp
+          amenityIds.push(new mongoose.Types.ObjectId(trimmed));
+        } else {
+          // Là tên - tìm trong database
+          const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const amenityDoc = await AmenityModel.findOne({
+            name: { $regex: new RegExp(escapeRegex(trimmed), 'i') }
+          }).select('_id');
+          if (amenityDoc) {
+            amenityIds.push(amenityDoc._id);
+          }
+        }
+      }
+      
+      if (amenityIds.length > 0) {
+        query.amenities = { $in: amenityIds };
       } else {
-        query.ward = null
+        // Không tìm thấy tiện nghi phù hợp - trả về mảng rỗng
+        return [];
       }
     }
 
+    // Tìm kiếm theo địa chỉ - tìm trong cả name, address VÀ ward.name
+    if (filterCriteria.address) {
+      const searchTerm = filterCriteria.address.trim();
+      
+      // Tìm các ward có tên khớp với từ khóa
+      const matchingWards = await WardModel.find({ 
+        name: { $regex: searchTerm, $options: 'i' } 
+      }).select('_id');
+      
+      // Tạo điều kiện $or để tìm trong name, address, hoặc ward
+      const orConditions = [
+        { name: { $regex: searchTerm, $options: 'i' } },
+        { address: { $regex: searchTerm, $options: 'i' } }
+      ];
+      
+      if (matchingWards.length > 0) {
+        orConditions.push({ ward: { $in: matchingWards.map(w => w._id) } });
+      }
+      
+      query.$or = orConditions;
+    }
+
+    // Tìm kiếm theo phường/xã - hỗ trợ cả ObjectID và tên
+    if (filterCriteria.ward) {
+      const wardValue = filterCriteria.ward.trim();
+      
+      // Kiểm tra nếu là ObjectID hợp lệ (24 ký tự hex)
+      if (/^[0-9a-fA-F]{24}$/.test(wardValue)) {
+        // Là ObjectID - sử dụng trực tiếp
+        query.ward = new mongoose.Types.ObjectId(wardValue);
+      } else {
+        // Là tên - tìm trong database
+        const wards = await WardModel.find({ name: { $regex: wardValue, $options: 'i' } }).select('_id');
+        if (wards.length > 0) {
+          query.ward = { $in: wards.map(w => w._id) };
+        } else {
+          return [];
+        }
+      }
+    }
+
+    // Tìm kiếm theo khoảng giá
     if (filterCriteria.minPrice || filterCriteria.maxPrice) {
       query.price = {};
       if (filterCriteria.minPrice)
         query.price.$gte = parseInt(filterCriteria.minPrice);
       if (filterCriteria.maxPrice)
         query.price.$lte = parseInt(filterCriteria.maxPrice);
+    }
+
+    // Tìm kiếm theo số sao (avgRating)
+    if (filterCriteria.avgRating) {
+      query.avgRating = { $gte: parseFloat(filterCriteria.avgRating) };
+    }
+
+    // Tìm kiếm theo tổng số đánh giá
+    if (filterCriteria.totalRatings) {
+      query.totalRatings = { $gte: parseInt(filterCriteria.totalRatings) };
     }
 
     const rooms = await RoomModel.find({
