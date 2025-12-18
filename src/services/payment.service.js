@@ -46,14 +46,30 @@ export const paymentService = {
     return { paymentUrl, orderId };
   },
   async handleReturnUrl(query) {
+    console.log("=== VNPay Return URL Query ===");
+    console.log("Raw query:", JSON.stringify(query, null, 2));
+    console.log("vnp_ResponseCode:", query.vnp_ResponseCode);
+    console.log("vnp_TransactionStatus:", query.vnp_TransactionStatus);
+    
     const verify = vnpay.verifyReturnUrl(query);
+    console.log("=== Verify Result ===");
+    console.log("Full verify object:", JSON.stringify(verify, null, 2));
+    console.log("verify.isSuccess:", verify.isSuccess);
+    console.log("verify.isVerified:", verify.isVerified);
+    console.log("verify.message:", verify.message);
+    
+    // Xác định trạng thái dựa trên CẢ isVerified VÀ responseCode
+    const isPaymentSuccess = verify.isVerified && query.vnp_ResponseCode === "00";
+    console.log("Final isPaymentSuccess:", isPaymentSuccess);
+    
     const { vnp_TxnRef } = query;
 
     const payment = await Payment.findOne({ txnRef: vnp_TxnRef });
     if (!payment) throw new Error("Không tìm thấy payment trong hệ thống");
 
-    // Cập nhật trạng thái payment
-    payment.status = verify.isSuccess ? "success" : "failed";
+    // Cập nhật trạng thái payment - SỬ DỤNG isPaymentSuccess
+    payment.status = isPaymentSuccess ? "success" : "failed";
+    console.log("Payment status saved as:", payment.status);
     payment.responseCode = query.vnp_ResponseCode;
     payment.transactionStatus = query.vnp_TransactionStatus;
     payment.bankCode = query.vnp_BankCode;
@@ -64,7 +80,7 @@ export const paymentService = {
     await payment.save();
 
     // Nếu thanh toán Premium thành công, cập nhật phòng
-    if (verify.isSuccess && payment.type === "premium") {
+    if (isPaymentSuccess && payment.type === "premium") {
       const room = await RoomModel.findById(payment.roomId);
       if (room) {
         const premiumUntil = new Date();
@@ -89,15 +105,15 @@ export const paymentService = {
     // Thông báo chung cho user
     await notificationService.createNew({
       userId: payment.userId,
-      title: verify.isSuccess ? "Thanh toán thành công" : "Thanh toán thất bại",
-      message: verify.isSuccess
+      title: isPaymentSuccess ? "Thanh toán thành công" : "Thanh toán thất bại",
+      message: isPaymentSuccess
         ? `Bạn đã thanh toán thành công nâng cấp phòng "${payment.description}" với số tiền ${payment.amount} VND`
         : `Thanh toán nâng cấp phòng thất bại. Vui lòng thử lại.`,
-      type: verify.isSuccess ? "payment:success" : "payment:failed",
+      type: isPaymentSuccess ? "payment:success" : "payment:failed",
       referenceId: payment._id,
       referenceType: "payment",
     });
 
-    return verify;
+    return { isSuccess: isPaymentSuccess, isVerified: verify.isVerified, message: verify.message };
   },
 };

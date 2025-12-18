@@ -58,26 +58,30 @@
 
       async function loadStatus() {
         try {
+          console.log("Checking payment status for orderId:", orderId);
           const res = await fetch(
             "/api/payment/check-status?orderId=" + orderId
           );
           const data = await res.json();
+          console.log("API Response:", data);
 
           const div = document.getElementById("status");
           const paymentStatus = data?.status;
+          console.log("Payment status from DB:", paymentStatus);
 
           if (paymentStatus === "success") {
-                div.innerHTML = "<p class='status success'>🎉 Thanh toán thành công!</p>";
+                div.innerHTML = "<p class='status success'>🎉 Thanh toán thành công!</p><p>Status: " + paymentStatus + "</p>";
                 // Tự động redirect về app sau 2 giây
                 setTimeout(() => goBack(true), 2000);
           } else {
-              div.innerHTML = "<p class='status fail'>❌ Thanh toán thất bại!</p>";
+              div.innerHTML = "<p class='status fail'>❌ Thanh toán thất bại!</p><p>Status: " + paymentStatus + "</p><p>Response: " + JSON.stringify(data) + "</p>";
               setTimeout(() => goBack(false), 2000);
           }
 
         } catch (e) {
+          console.error("Error checking status:", e);
           document.getElementById("status").innerHTML =
-            "<p class='status fail'>Lỗi kiểm tra trạng thái thanh toán.</p>";
+            "<p class='status fail'>Lỗi kiểm tra trạng thái thanh toán: " + e.message + "</p>";
         }
       }
 
