@@ -59,17 +59,21 @@
       async function loadStatus() {
         try {
           const res = await fetch(
-            "http://localhost:5050/api/payment/check-status?orderId=" + orderId
+            "/api/payment/check-status?orderId=" + orderId
           );
           const data = await res.json();
 
           const div = document.getElementById("status");
+          const paymentStatus = data?.status;
 
-          if (data?.status === "success") {
+          if (paymentStatus === "success") {
                 div.innerHTML = "<p class='status success'>🎉 Thanh toán thành công!</p>";
-                } else {
-                    div.innerHTML = "<p class='status fail'>❌ Thanh toán thất bại!</p>";
-                }
+                // Tự động redirect về app sau 2 giây
+                setTimeout(() => goBack(true), 2000);
+          } else {
+              div.innerHTML = "<p class='status fail'>❌ Thanh toán thất bại!</p>";
+              setTimeout(() => goBack(false), 2000);
+          }
 
         } catch (e) {
           document.getElementById("status").innerHTML =
@@ -77,9 +81,17 @@
         }
       }
 
-      function goBack() {
-        window.close(); // nếu web mở trong popup
-        window.history.back(); // fallback
+      function goBack(isSuccess) {
+        const status = isSuccess ? 'success' : 'failed';
+        // Thử mở deep link Expo app
+        const deepLink = 'exp://192.168.1.15:8081/--/payment-result?status=' + status + '&orderId=' + orderId;
+        window.location.href = deepLink;
+        
+        // Fallback: đóng tab sau 500ms nếu deep link không hoạt động
+        setTimeout(() => {
+          window.close();
+          window.history.back();
+        }, 500);
       }
 
       loadStatus();
