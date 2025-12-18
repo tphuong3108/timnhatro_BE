@@ -58,28 +58,44 @@
 
       async function loadStatus() {
         try {
+          console.log("Checking payment status for orderId:", orderId);
           const res = await fetch(
-            "http://localhost:5050/api/payment/check-status?orderId=" + orderId
+            "/api/payment/check-status?orderId=" + orderId
           );
           const data = await res.json();
+          console.log("API Response:", data);
 
           const div = document.getElementById("status");
+          const paymentStatus = data?.status;
+          console.log("Payment status from DB:", paymentStatus);
 
-          if (data?.status === "success") {
-                div.innerHTML = "<p class='status success'>🎉 Thanh toán thành công!</p>";
-                } else {
-                    div.innerHTML = "<p class='status fail'>❌ Thanh toán thất bại!</p>";
-                }
+          if (paymentStatus === "success") {
+                div.innerHTML = "<p class='status success'>🎉 Thanh toán thành công!</p><p>Status: " + paymentStatus + "</p>";
+                // Tự động redirect về app sau 2 giây
+                setTimeout(() => goBack(true), 2000);
+          } else {
+              div.innerHTML = "<p class='status fail'>❌ Thanh toán thất bại!</p><p>Status: " + paymentStatus + "</p><p>Response: " + JSON.stringify(data) + "</p>";
+              setTimeout(() => goBack(false), 2000);
+          }
 
         } catch (e) {
+          console.error("Error checking status:", e);
           document.getElementById("status").innerHTML =
-            "<p class='status fail'>Lỗi kiểm tra trạng thái thanh toán.</p>";
+            "<p class='status fail'>Lỗi kiểm tra trạng thái thanh toán: " + e.message + "</p>";
         }
       }
 
-      function goBack() {
-        window.close(); // nếu web mở trong popup
-        window.history.back(); // fallback
+      function goBack(isSuccess) {
+        const status = isSuccess ? 'success' : 'failed';
+        // Thử mở deep link Expo app
+        const deepLink = 'exp://192.168.1.15:8081/--/payment-result?status=' + status + '&orderId=' + orderId;
+        window.location.href = deepLink;
+        
+        // Fallback: đóng tab sau 500ms nếu deep link không hoạt động
+        setTimeout(() => {
+          window.close();
+          window.history.back();
+        }, 500);
       }
 
       loadStatus();

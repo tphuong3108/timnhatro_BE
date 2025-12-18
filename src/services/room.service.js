@@ -843,11 +843,14 @@ const getHotRooms = async () => {
     const LIMIT = 20;
     const now = new Date();
     const startOfWeek = new Date(now);
-    const day = now.getDay(); // 0 = Chủ nhật
+    const day = now.getDay();
     startOfWeek.setDate(now.getDate() - day);
     startOfWeek.setHours(0, 0, 0, 0);
 
-    // phòng nổi bật trong tuần
+    // Cập nhật phòng hết hạn premium trước
+    await updateExpiredPremium();
+
+    // phòng nổi bật trong tuần - ƯU TIÊN PHÒNG PREMIUM
     const weeklyRooms = await RoomModel.aggregate([
       {
         $match: {
@@ -860,8 +863,25 @@ const getHotRooms = async () => {
       {
         $addFields: {
           favoriteCount: { $size: { $ifNull: ["$favorites", []] } },
+          // Kiểm tra phòng Premium còn hiệu lực
+          isPremiumActive: {
+            $and: [
+              { $eq: ["$isPremium", true] },
+              { $gt: ["$premiumUntil", now] }
+            ]
+          },
+          // Tính hotScore với điểm ưu tiên Premium (+1000 nếu Premium)
           hotScore: {
             $add: [
+              // Điểm Premium ưu tiên cao nhất
+              { $cond: [
+                { $and: [
+                  { $eq: ["$isPremium", true] },
+                  { $gt: ["$premiumUntil", now] }
+                ]},
+                1000, // Phòng Premium được +1000 điểm ưu tiên
+                0
+              ]},
               { $multiply: [{ $ifNull: ["$avgRating", 0] }, 10] },
               { $multiply: [{ $ifNull: ["$totalLikes", 0] }, 2] },
               { $ifNull: ["$viewCount", 0] }
@@ -871,6 +891,7 @@ const getHotRooms = async () => {
       },
       {
         $sort: {
+          isPremiumActive: -1, // Phòng Premium lên đầu
           hotScore: -1,
           avgRating: -1,
           totalLikes: -1,
@@ -889,7 +910,10 @@ const getHotRooms = async () => {
           avgRating: 1,
           favoriteCount: 1,
           totalLikes: 1,
-          viewCount: 1
+          viewCount: 1,
+          isPremium: 1,
+          premiumUntil: 1,
+          isPremiumActive: 1
         }
       },
       { $limit: LIMIT }
@@ -898,7 +922,7 @@ const getHotRooms = async () => {
     if (weeklyRooms.length >= LIMIT) return weeklyRooms; // Nếu có dữ liệu thỏa -> trả về luôn
 
     const needed = LIMIT - weeklyRooms.length;
-    // Lấy top phòng có like + view cao nhất nếu không có phòng nổi bật
+    // Lấy top phòng có like + view cao nhất nếu không có phòng nổi bật - ƯU TIÊN PHÒNG PREMIUM
     let fallbackRooms = await RoomModel.aggregate([
       {
         $match: {
@@ -911,8 +935,25 @@ const getHotRooms = async () => {
       {
         $addFields: {
           favoriteCount: { $size: { $ifNull: ["$favorites", []] } },
+          // Kiểm tra phòng Premium còn hiệu lực
+          isPremiumActive: {
+            $and: [
+              { $eq: ["$isPremium", true] },
+              { $gt: ["$premiumUntil", now] }
+            ]
+          },
+          // Tính hotScore với điểm ưu tiên Premium (+1000 nếu Premium)
           hotScore: {
             $add: [
+              // Điểm Premium ưu tiên cao nhất
+              { $cond: [
+                { $and: [
+                  { $eq: ["$isPremium", true] },
+                  { $gt: ["$premiumUntil", now] }
+                ]},
+                1000, // Phòng Premium được +1000 điểm ưu tiên
+                0
+              ]},
               { $multiply: [{ $ifNull: ["$avgRating", 0] }, 10] },
               { $multiply: [{ $ifNull: ["$totalLikes", 0] }, 2] },
               { $ifNull: ["$viewCount", 0] }
@@ -922,6 +963,7 @@ const getHotRooms = async () => {
       },
       {
         $sort: {
+          isPremiumActive: -1, // Phòng Premium lên đầu
           hotScore: -1,
           avgRating: -1,
           totalLikes: -1,
@@ -940,7 +982,10 @@ const getHotRooms = async () => {
           avgRating: 1,
           favoriteCount: 1,
           totalLikes: 1,
-          viewCount: 1
+          viewCount: 1,
+          isPremium: 1,
+          premiumUntil: 1,
+          isPremiumActive: 1
         }
       },
       { $limit: needed }

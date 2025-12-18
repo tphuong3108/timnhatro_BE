@@ -35,6 +35,7 @@ export const verifyHost = (req, res, next) => {
 
 // Chỉ tenant
 export const verifyTenant = (req, res, next) => {
+  console.log('[DEBUG verifyTenant] URL:', req.method, req.originalUrl, '| Role:', req.user?.role);
   if (!req.user || req.user.role !== 'tenant') {
     return next(new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền truy cập'))
   }

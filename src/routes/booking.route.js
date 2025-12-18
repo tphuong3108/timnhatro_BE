@@ -1,13 +1,13 @@
 import express from "express";
 import { bookingController } from "../controllers/booking.controller.js";
-import { verifyToken, verifyHost, verifyTenant } from "../middlewares/auth.middleware.js";
+import { verifyToken, verifyHost, verifyTenant, verifyRoles } from "../middlewares/auth.middleware.js";
 import { verifyBookingOwnerTenant,verifyBookingOwnerHost} from "../middlewares/booking.middleware.js"
 const Router = express.Router();
 Router.post("/", verifyToken, verifyTenant, bookingController.create);
 
-Router.get("/me", verifyToken, verifyTenant, bookingController.listUser);
+Router.get("/me", verifyToken, verifyRoles('tenant', 'host'), bookingController.listUser);
 Router.get("/host", verifyToken, verifyHost, bookingController.listHost);
-Router.get("/check", verifyToken, verifyTenant, bookingController.checkBooked);
+Router.get("/check", verifyToken, verifyRoles('tenant', 'host'), bookingController.checkBooked);
 
 Router.put("/:id/approve", verifyToken,verifyBookingOwnerHost, verifyHost, bookingController.approve);
 Router.put("/:id/decline", verifyToken,verifyBookingOwnerHost, verifyHost, bookingController.decline);

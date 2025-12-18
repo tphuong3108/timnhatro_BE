@@ -28,11 +28,4 @@ Router.get(
   paymentController.getAdminPaymentHistory
 );
 
-Router.post('/premium/create-payment-url',verifyToken,verifyRoles('host'),
-  roomValidation.createPremiumPaymentValidate,
-  paymentController.createPremiumPaymentUrl
-);
-Router.get("/premium/return", paymentController.returnPremiumPayment);
-Router.get("/check-status", paymentController.checkPaymentStatus);
-
 export const paymentRoute = Router;
