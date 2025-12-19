@@ -16,14 +16,34 @@ const Amenities = [
   // Nhóm tiện nghi nổi bật (tuỳ chọn)
   { name: 'Ban công / sân nhỏ', description: 'Có ban công hoặc sân nhỏ để thư giãn.' },
   { name: 'Bồn tắm', description: 'Phòng có bồn tắm để thư giãn.' },
-  { name: 'Hồ bơi (nếu chung cư có)', description: 'Hồ bơi chung cho cư dân.' },
+  { name: 'Hồ bơi', description: 'Hồ bơi chung cho cư dân.' },
   { name: 'Phòng gym chung', description: 'Phòng tập thể dục chung trong khuôn viên.' },
   { name: 'Khu vực ăn uống ngoài trời', description: 'Khu vực để ăn uống ngoài trời.' },
 
   // Nhóm an toàn
   { name: 'Máy báo khói', description: 'Thiết bị cảnh báo khói trong phòng.' },
   { name: 'Bình chữa cháy', description: 'Bình chữa cháy an toàn trong khu vực.' },
-  { name: 'Bộ sơ cứu', description: 'Bộ dụng cụ sơ cứu cơ bản.' }
+  { name: 'Bộ sơ cứu', description: 'Bộ dụng cụ sơ cứu cơ bản.' },
+
+  //Bổ sung thêm
+  { name: 'Gác lửng', description: 'Phòng có gác lửng.' },
+  { name: 'Vệ sinh trong', description: 'Nhà vệ sinh khép kín trong phòng.' },
+  { name: 'Phòng tắm', description: 'Có phòng tắm riêng.' },
+  { name: 'Bình nóng lạnh', description: 'Trang bị bình nước nóng.' },
+  { name: 'Giường nệm', description: 'Có giường và nệm.' },
+  { name: 'Tủ áo quần', description: 'Tủ đựng quần áo.' },
+  { name: 'Thang máy', description: 'Có thang máy trong tòa nhà.' },
+  { name: 'Camera an ninh', description: 'Camera an ninh khu vực chung.' },
+  { name: 'Sân vườn', description: 'Không gian sân vườn.' },
+
+  //Môi trường xung quanh
+  { name: 'Gần chợ', description: 'Khu trọ nằm gần chợ, thuận tiện mua sắm.' },
+  { name: 'Gần siêu thị', description: 'Có siêu thị gần khu vực sinh sống.' },
+  { name: 'Gần bệnh viện', description: 'Dễ dàng tiếp cận các cơ sở y tế.' },
+  { name: 'Gần trường học', description: 'Phù hợp cho học sinh, sinh viên.' },
+  { name: 'Gần công viên', description: 'Không gian xanh, thuận tiện thư giãn.' },
+  { name: 'Gần bến xe Bus', description: 'Thuận tiện di chuyển bằng xe buýt.' },
+  { name: 'Gần trung tâm thể dục thể thao', description: 'Dễ dàng tập luyện và rèn luyện sức khỏe.' }
 ];
 
 const seedAmenities = async () => {

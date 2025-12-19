@@ -1,6 +1,7 @@
 import UserModel from '~/models/User.model.js'
 import RoomModel from '~/models/Room.model.js'
 import ReviewModel from '../models/Review.model'
+import { notificationService } from './notification.service.js'
 
 const getMe = async (adminId) => {
   const admin = await UserModel.findById(adminId).select(
@@ -167,6 +168,15 @@ const deleteReview = async (id) => {
   try {
     const deletedReview = await ReviewModel.findByIdAndDelete(id)
     await deletedReview.updateRoomAvgRating()
+
+    // Tạo thông báo cho người viết review
+    await notificationService.createNew({
+      userId: review.userId,
+      title: 'Đánh giá của bạn đã bị xóa',
+      content: `Đánh giá "${review.comment}" của bạn đã bị xóa bởi quản trị viên.`,
+      type: 'review:deleted',
+      referenceId: review._id
+    })
     return deletedReview
   } catch (error) {
     throw error
@@ -228,6 +238,16 @@ const getUserMonthlyStats = async () => {
 const hideReview = async (id) => {
   try {
     const review = await ReviewModel.findByIdAndUpdate(id, { _hidden: true }, { new: true })
+
+    if (review) {
+      await notificationService.createNew({
+        userId: review.userId,
+        title: 'Đánh giá của bạn đã bị ẩn',
+        content: `Đánh giá "${review.comment}" của bạn đã bị ẩn bởi quản trị viên.`,
+        type: 'review:hidden',
+        referenceId: review._id
+      })
+    }
     return review
   } catch (error) {
     throw error
@@ -479,9 +499,104 @@ const getReportsStats = async () => {
   }
 };
 
-
-const handleReports = async () => {
+const getReviewReports = async () => {
   try {
+    const { reportedReviews } = await getReportsStats()
+    return reportedReviews
+  } catch (error) {
+    throw error
+  }
+}
+
+
+/**
+ * Xử lý báo cáo - hỗ trợ cả tự động và thủ công
+ * @param {Object} options - Tham số tùy chọn
+ * @param {string} options.type - 'room' hoặc 'review' (cho xử lý thủ công)
+ * @param {string} options.id - ID của room/review (cho xử lý thủ công)
+ * @param {string} options.action - 'approve' hoặc 'reject' (cho xử lý thủ công)
+ * Nếu không truyền options → xử lý TỰ ĐỘNG tất cả báo cáo
+ */
+const handleReports = async (options = {}) => {
+  try {
+    const { type, id, action } = options
+
+    // ===== XỬ LÝ THỦ CÔNG (khi có đủ params) =====
+    // approve = duyệt báo cáo (báo cáo ĐÚNG) → ẩn room/review
+    // reject = từ chối báo cáo (báo cáo SAI) → giữ nguyên room/review, xóa reports
+    if (type && id && action) {
+      const isApprove = action === 'approve'
+      
+      if (type === 'room') {
+        // approve: báo cáo đúng → ẩn phòng
+        // reject: báo cáo sai → giữ phòng, chỉ xóa reports
+        const updateData = isApprove 
+          ? { $set: { reports: [], status: 'hidden' } }
+          : { $set: { reports: [] } }
+        
+        const room = await RoomModel.findByIdAndUpdate(id, updateData, { new: true })
+        if (!room) throw new Error('Không tìm thấy phòng')
+
+        // Wrap notification in try-catch để không fail nếu notification lỗi
+        try {
+          await notificationService.createNew({
+            userId: room.createdBy,
+            title: isApprove ? 'Phòng của bạn đã bị ẩn' : 'Báo cáo phòng đã được xem xét',
+            content: isApprove 
+              ? `Phòng "${room.name}" đã bị ẩn sau khi admin xem xét các báo cáo.`
+              : `Phòng "${room.name}" đã được admin xem xét. Báo cáo không hợp lệ và đã được xóa.`,
+            type: `room:report_${action}d`,
+            referenceId: room._id
+          })
+        } catch (notifError) {
+          console.error('[handleReports] Notification error:', notifError.message)
+        }
+
+        return { 
+          success: true, 
+          mode: 'manual',
+          message: isApprove ? 'Đã duyệt báo cáo và ẩn phòng' : 'Đã từ chối báo cáo, giữ nguyên phòng',
+          data: { type: 'room', action, item: room } 
+        }
+      }
+
+      if (type === 'review') {
+        // approve: báo cáo đúng → ẩn review
+        // reject: báo cáo sai → giữ review, chỉ xóa reports
+        const updateData = isApprove 
+          ? { $set: { reports: [], _hidden: true } }
+          : { $set: { reports: [] } }
+        
+        const review = await ReviewModel.findByIdAndUpdate(id, updateData, { new: true })
+        if (!review) throw new Error('Không tìm thấy đánh giá')
+
+        // Wrap notification in try-catch để không fail nếu notification lỗi
+        try {
+          await notificationService.createNew({
+            userId: review.userId,
+            title: isApprove ? 'Đánh giá của bạn đã bị ẩn' : 'Báo cáo đánh giá đã được xem xét',
+            content: isApprove
+              ? `Đánh giá "${review.comment}" đã bị ẩn sau khi admin xem xét các báo cáo.`
+              : `Đánh giá "${review.comment}" đã được admin xem xét. Báo cáo không hợp lệ và đã được xóa.`,
+            type: `review:report_${action}d`,
+            referenceId: review._id
+          })
+        } catch (notifError) {
+          console.error('[handleReports] Notification error:', notifError.message)
+        }
+
+        return { 
+          success: true, 
+          mode: 'manual',
+          message: isApprove ? 'Đã duyệt báo cáo và ẩn đánh giá' : 'Đã từ chối báo cáo, giữ nguyên đánh giá',
+          data: { type: 'review', action, item: review } 
+        }
+      }
+
+      throw new Error('Loại báo cáo không hợp lệ. Sử dụng "room" hoặc "review"')
+    }
+
+    // ===== XỬ LÝ TỰ ĐỘNG (khi không có params) =====
     // ===== Phòng =====
     const reportedRooms = await RoomModel.aggregate([
       { $unwind: "$reports" },
@@ -504,27 +619,41 @@ const handleReports = async () => {
     for (const room of reportedRooms) {
       if (room.totalReports >= 5) {
         await RoomModel.findByIdAndUpdate(room._id, { status: "hidden" });
+        await notificationService.createNew({
+          userId: room.createdBy,
+          title: 'Phòng của bạn đã bị ẩn',
+          content: `Phòng "${room.name}" đã nhận ${room.totalReports} báo cáo và bị ẩn.`,
+          type: 'room:reported',
+          referenceId: room._id
+        })
       }
       if (room.totalReports >= 10) {
         await UserModel.findByIdAndUpdate(room.createdBy, { banned: true });
+        await notificationService.createNew({
+          userId: room.createdBy,
+          title: 'Tài khoản của bạn bị khóa',
+          content: `Tài khoản của bạn bị khóa do phòng "${room.name}" nhận quá nhiều báo cáo.`,
+          type: 'room:banned',
+          referenceId: room._id
+        })
       }
     }
 
     // ===== Review =====
     const reportedReviews = await ReviewModel.aggregate([
-    { $match: { "reports.0": { $exists: true } } },
-    { $unwind: "$reports" },
-    {
-      $addFields: {
-        roomId: {
-          $cond: [
-            { $eq: [{ $type: "$roomId" }, "string"] },
-            { $toObjectId: "$roomId" },
-            "$roomId"
-          ]
+      { $match: { "reports.0": { $exists: true } } },
+      { $unwind: "$reports" },
+      {
+        $addFields: {
+          roomId: {
+            $cond: [
+              { $eq: [{ $type: "$roomId" }, "string"] },
+              { $toObjectId: "$roomId" },
+              "$roomId"
+            ]
+          }
         }
-      }
-    },
+      },
       { $group: { 
           _id: "$_id", 
           userId: { $first: "$userId" }, 
@@ -544,15 +673,30 @@ const handleReports = async () => {
     for (const review of reportedReviews) {
       if (review.totalReports >= 5) {
         await ReviewModel.findByIdAndUpdate(review._id, { _hidden: true });
+        await notificationService.createNew({
+          userId: review.userId,
+          title: 'Đánh giá của bạn đã bị ẩn',
+          content: `Đánh giá "${review.comment}" đã nhận ${review.totalReports} báo cáo và bị ẩn.`,
+          type: 'review:reported',
+          referenceId: review._id
+        })
       }
       if (review.totalReports >= 10) {
         await UserModel.findByIdAndUpdate(review.userId, { banned: true });
+        await notificationService.createNew({
+          userId: review.userId,
+          title: 'Tài khoản của bạn bị khóa',
+          content: `Tài khoản của bạn bị khóa do đánh giá "${review.comment}" nhận quá nhiều báo cáo.`,
+          type: 'review:banned',
+          referenceId: review._id
+        })
       }
     }
 
     return {
       success: true,
-      message: "Đã xử lý report thành công",
+      mode: 'auto',
+      message: "Đã xử lý report tự động thành công",
       topRooms,
       topReviews
     };
@@ -652,8 +796,9 @@ export const adminService = {
   getUserMonthlyStats,
   getTopHosts,
   getReportsStats,
+  getReviewReports,
   handleReports,
   getTopAmenities,
-  getTopWards,
-  
+  getTopWards
 }
+

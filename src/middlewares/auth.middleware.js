@@ -1,6 +1,8 @@
+import jwt from 'jsonwebtoken'
 import { jwtVerify } from '~/utils/jwt'
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '~/utils/ApiError'
+
 
 export const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1]
@@ -33,6 +35,7 @@ export const verifyHost = (req, res, next) => {
 
 // Chỉ tenant
 export const verifyTenant = (req, res, next) => {
+  console.log('[DEBUG verifyTenant] URL:', req.method, req.originalUrl, '| Role:', req.user?.role);
   if (!req.user || req.user.role !== 'tenant') {
     return next(new ApiError(StatusCodes.FORBIDDEN, 'Bạn không có quyền truy cập'))
   }
@@ -47,4 +50,17 @@ export const verifyRoles = (...allowedRoles) => {
     }
     next()
   }
+}
+export const verifyTokenOptional = (req, res, next) => {
+  const authHeader = req.headers.authorization
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1]
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET)
+      req.user = decoded
+    } catch (err) {
+      console.warn('Token optional không hợp lệ:', err.message)
+    }
+  }
+  next()
 }

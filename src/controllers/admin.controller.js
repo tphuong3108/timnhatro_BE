@@ -105,6 +105,19 @@ const getFilteredReviews = async (req, res, next) => {
   }
 }
 
+const getReviewReports = async (req, res, next) => {
+  try {
+    const reviews = await adminService.getReviewReports()
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Thống kê báo cáo đánh giá thành công',
+      data: reviews
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const deleteReview = async (req, res, next) => {
   try {
     const { id } = req.params
@@ -169,19 +182,36 @@ const getReportStats = async (req, res, next) => {
 
 const processReports = async (req, res, next) => {
   try {
-    const data = await adminService.handleReports();
+    const { type, id, action } = req.body
+    
+    // Validate nếu có params cho xử lý thủ công
+    if (type || id || action) {
+      if (!type || !id || !action) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, 'Thiếu tham số. Cần truyền đủ type, id và action')
+      }
+      if (!['room', 'review'].includes(type)) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, 'Loại báo cáo không hợp lệ. Sử dụng "room" hoặc "review"')
+      }
+      if (!['approve', 'reject'].includes(action)) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, 'Hành động không hợp lệ. Sử dụng "approve" hoặc "reject"')
+      }
+    }
+
+    const result = await adminService.handleReports({ type, id, action });
+    
     res.status(StatusCodes.OK).json({
       success: true,
-      message: data.message,
-      data: {
-        topRooms: data.topRooms,
-        topReviews: data.topReviews
-      }
+      message: result.message,
+      mode: result.mode,
+      data: result.mode === 'auto' 
+        ? { topRooms: result.topRooms, topReviews: result.topReviews }
+        : result.data
     });
   } catch (error) {
     next(error);
   }
 }
+
 const getTopAmenities = async (req, res, next) => {
   try {
     const amenities = await adminService.getTopAmenities()
@@ -220,6 +250,7 @@ export const adminController = {
   getLoginStats,
   getUserMonthlyStats,
   getTopHosts,
+  getReviewReports,
   getReportStats,
   processReports,
   getTopAmenities,

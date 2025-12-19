@@ -19,7 +19,7 @@ const roomSchema = new mongoose.Schema({
     required: true,
     trim: true,
     minlength: 10,
-    maxlength: 500
+    maxlength: 3000
   },
   price: {
     type: Number,
@@ -76,11 +76,12 @@ const roomSchema = new mongoose.Schema({
     min: 0,
     max: 5
   },
-  favorites: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: 'Room',
-    default: [],
-  },
+  favorites: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+    },
+  ],
   totalRatings: {
     type: Number,
     default: 0
@@ -149,6 +150,18 @@ const roomSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },isPremium: {
+  type: Boolean,
+  default: false
+  },
+  premiumUntil: {
+    type: Date,
+    default: null 
+  },
+  premiumPaymentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Payment',  
+    default: null
   }
 }, {
   timestamps: true,

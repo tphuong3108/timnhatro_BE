@@ -18,11 +18,11 @@ const createNew = async (req, res, next) => {
       'string.min': 'name must be at least 3 characters long',
       'string.max': 'name must be at most 100 characters long'
     }),
-    description: Joi.string().min(10).max(500).required().messages({
+    description: Joi.string().min(10).max(3000).required().messages({
       'string.base': 'description must be a string',
       'string.empty': 'description cannot be empty',
       'string.min': 'description must be at least 10 characters long',
-      'string.max': 'description must be at most 500 characters long'
+      'string.max': 'description must be at most 3000 characters long'
     }),
     price: Joi.number().min(0).required().messages({
       'number.base': 'price must be a number',
@@ -71,20 +71,44 @@ const createNew = async (req, res, next) => {
         'string.base': 'each video must be a string'
       })
     ).optional(),
+    // images: Joi.array().items(
+    //   Joi.string().uri().messages({
+    //     'string.base': 'each image must be a string',
+    //     'string.uri': 'each image must be a valid URL'
+    //   })
+    // ).min(1).required().messages({
+    //   'array.base': 'images must be an array of strings',
+    //   'array.min': 'at least 1 image is required'
+    // }),
+    // videos: Joi.array().items(
+    //   Joi.string().messages({
+    //     'string.base': 'each video must be a string'
+    //   })
+    // ).optional(),
   })
   try {
-    // if (req.body.location && typeof req.body.location === 'string') {
-    //   req.body.location = JSON.parse(req.body.location)
-    // }
-    // if (req.body.amenities && typeof req.body.amenities === 'string') {
-    //   req.body.amenities = JSON.parse(req.body.amenities)
-    // }
-    // if (req.body.ward && typeof req.body.ward === 'string') {
-    //   req.body.ward = JSON.parse(req.body.ward)[0]
-    // }
     const data = req?.body ? req.body : {}
+    // Kết hợp images từ req.body và req.files
+    const filesImages = req.files?.images?.map(f => f.path) || []
+    if (data.images) {
+      data.images = Array.isArray(data.images) ? data.images.concat(filesImages) : [data.images, ...filesImages]
+    } else {
+      data.images = filesImages
+    }
+
+    if (!data.images || data.images.length === 0) {
+      throw new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, '"images" is required')
+    }
+
     await validationRule.validateAsync(data, { abortEarly: false })
+    req.body = data
     next()
+    // await validationRule.validateAsync(data, { abortEarly: false })
+    // // Kiểm tra images từ req.files (bắt buộc phải có ít nhất 1 file)
+    // if (!req.files || !req.files.images || req.files.images.length === 0) {
+    //   throw new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, '"images" is required');
+    // }
+    // next()
   } catch (error) {
     next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
   }
@@ -103,7 +127,11 @@ const updateRoomValidate = async (req, res, next) => {
       'number.base': 'price must be a number',
       'number.min': 'price must be at least 0'
     }).optional(),
-
+    description: Joi.string().min(10).max(3000).messages({
+    'string.base': 'description must be a string',
+    'string.min': 'description must be at least 10 characters',
+    'string.max': 'description must be at most 3000 characters'
+  }).optional(),
     amenities: Joi.array().items(
       Joi.string().pattern(OBJECT_ID_RULE).messages({
         'string.pattern.base': OBJECT_ID_RULE_MESSAGE
@@ -147,6 +175,14 @@ const updateRoomValidate = async (req, res, next) => {
   try {
     const roomIdData = req?.params || {}
     const data = req?.body ? req.body : {}
+
+    // Kết hợp images từ req.body và req.files
+    const filesImages = req.files?.images?.map(f => f.path) || []
+    if (data.images) {
+      data.images = Array.isArray(data.images) ? data.images.concat(filesImages) : [data.images, ...filesImages]
+    } else if (filesImages.length > 0) {
+      data.images = filesImages
+    }
 
     await idRule.validateAsync(roomIdData, { abortEarly: false })
     await validationRule.validateAsync(data, { abortEarly: false })
@@ -205,17 +241,17 @@ const updateRoomCoordinates = async (req, res, next) => {
 
 const searchValidate = async (req, res, next) => {
   const searchRule = Joi.object({
-    name: Joi.string().min(3).messages({
+    name: Joi.string().min(1).messages({
       'string.base': 'name must be a string',
-      'string.min': 'name must be at least 3 characters long'
+      'string.min': 'name must be at least 1 character long'
     }).optional(),
-    amenity: Joi.string().pattern(OBJECT_ID_RULE).messages({
+    amenity: Joi.string().min(1).messages({
       'string.base': 'amenity must be a string',
-      'string.pattern.base': OBJECT_ID_RULE_MESSAGE
+      'string.min': 'amenity must be at least 1 character long'
     }).optional(),
-    address: Joi.string().min(5).messages({
+    address: Joi.string().min(2).messages({
       'string.base': 'address must be a string',
-      'string.min': 'address must be at least 5 characters long'
+      'string.min': 'address must be at least 2 characters long'
     }).optional(),
     avgRating: Joi.number().min(0).max(5).messages({
       'number.base': 'avgRating must be a number',
@@ -227,9 +263,9 @@ const searchValidate = async (req, res, next) => {
       'number.integer': 'totalRatings must be an integer',
       'number.min': 'totalRatings must be at least 0'
     }).optional(),
-    ward: Joi.string().min(2).messages({
+    ward: Joi.string().min(1).messages({
       'string.base': 'ward must be a string',
-      'string.min': 'ward must be at least 2 characters long'
+      'string.min': 'ward must be at least 1 character long'
     }).optional(),
     priceMin: Joi.number().min(0).optional(),
     priceMax: Joi.number().min(0).optional()
@@ -278,6 +314,29 @@ const reportRoom = async (req, res, next) => {
   }
 }
 
+const createPremiumPaymentValidate = async (req, res, next) => {
+  const premiumRule = Joi.object({
+    roomId: Joi.string().pattern(OBJECT_ID_RULE).required().messages({
+      'string.empty': 'roomId không được để trống',
+      'string.pattern.base': 'roomId không hợp lệ',
+      'any.required': 'roomId là trường bắt buộc'
+    }),
+    durationDays: Joi.number().integer().valid(30, 60, 90).required().messages({
+      'number.base': 'durationDays phải là số',
+      'any.only': 'Chỉ được chọn 30, 60 hoặc 90 ngày',
+      'any.required': 'durationDays là trường bắt buộc'
+    })
+  })
+
+  try {
+    const data = req?.body || {}
+    await premiumRule.validateAsync(data, { abortEarly: false })
+    next()
+  } catch (error) {
+    next(new ApiError(StatusCodes.UNPROCESSABLE_ENTITY, new Error(error).message))
+  }
+}
+
 export const roomValidation = {
   createNew,
   updateRoomValidate,
@@ -286,5 +345,6 @@ export const roomValidation = {
   updateRoomCoordinates,
   searchValidate,
   nearbyRooms,
-  reportRoom
+  reportRoom,
+  createPremiumPaymentValidate
 }

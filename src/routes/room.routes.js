@@ -1,5 +1,5 @@
 import express from 'express'
-import { verifyToken, verifyRoles, verifyAdmin, verifyHost } from '~/middlewares/auth.middleware.js'
+import { verifyToken, verifyRoles, verifyTokenOptional } from '~/middlewares/auth.middleware.js'
 import { roomValidation } from '~/validations/room.validation.js'
 import { roomController } from '~/controllers/room.controller.js'
 import { generalValidation } from '~/validations/general.validation.js'
@@ -20,17 +20,20 @@ Router.get('/map-data', roomValidation.pagingValidate, roomController.getRoomsMa
 
 // Phòng nổi bật
 Router.get('/hot', roomController.getHotRooms)
+// Phòng premium
+Router.get('/premium', roomController.getPremiumRooms)
 
 // Chi tiết phòng
+Router.get('/slug/:slug', generalValidation.paramSlugValidate, verifyTokenOptional, roomController.getRoomDetailsBySlug)
 Router.get('/:id', generalValidation.paramIdValidate, roomController.getRoomDetails)
-Router.get('/slug/:slug', generalValidation.paramSlugValidate, roomController.getRoomDetailsBySlug)
 
+Router.get('/:id/premium-status', roomController.checkRoomPremiumStatus);
 // Like phòng
-Router.patch('/:id', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.likeRoom)
+Router.patch('/:id/like', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.likeRoom)
 
 // Thêm / xóa phòng khỏi yêu thích
-Router.post('/:id/favorite', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.addToFavorites)
-Router.delete('/:id/favorite', verifyToken, verifyRoles('tenant', 'host'), generalValidation.paramIdValidate, roomController.removeFromFavorites)
+Router.post('/slug/:slug/favorite', verifyToken, verifyRoles('tenant', 'host'), roomController.addToFavorites);
+Router.delete('/slug/:slug/favorite', verifyToken, verifyRoles('tenant', 'host'), roomController.removeFromFavorites);
 
 // Tăng view phòng
 Router.post('/:id/view', roomController.addViewCount)
