@@ -28,7 +28,7 @@ Router.post(
 Router.get(
   '/me',
   verifyToken,
-  verifyRoles('tenant', 'host'),
+  verifyRoles('tenant', 'host', 'admin'),
   // generalValidation.paramIdValidate,
   notificationController.getMyNotifications
 )

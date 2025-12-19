@@ -17,7 +17,7 @@ Router.get("/check-status", paymentController.checkPaymentStatus);
 Router.get(
   "/history/host",
   verifyToken,
-  verifyRoles('host'),
+  verifyRoles('host', 'admin'),
   paymentController.getHostPaymentHistory
 );
 
@@ -28,4 +28,13 @@ Router.get(
   paymentController.getAdminPaymentHistory
 );
 
+// Lấy chi tiết thanh toán premium (Host + Admin)
+Router.get(
+  "/premium/:paymentId",
+  verifyToken,
+  verifyRoles('host', 'admin'),
+  paymentController.getPaymentDetails
+);
+
 export const paymentRoute = Router;
+

@@ -804,7 +804,7 @@ const getNearbyRooms = async (queryParams) => {
         },
       },
       {
-        $match: { status: "approved" },
+        $match: { status: "approved", isDeleted: false },
       },
       {
         $lookup: {

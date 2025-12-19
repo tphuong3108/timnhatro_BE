@@ -81,8 +81,8 @@ export const paymentController = {
       if (status) filter.status = status;
 
       const payments = await Payment.find(filter)
-        .populate("userId", "fullName email phoneNumber")
-        .populate("roomId", "name address")
+        .populate("userId", "firstName lastName email phoneNumber avatar")
+        .populate("roomId", "name address images isPremium premiumUntil")
         .sort({ createdAt: -1 });
 
       return res.json({
@@ -93,6 +93,36 @@ export const paymentController = {
     } catch (error) {
       console.error("Lỗi lọc lịch sử giao dịch admin:", error);
       return res.status(500).json({ message: "Lỗi hệ thống" });
+    }
+  },
+
+  // Lấy chi tiết thanh toán premium
+  async getPaymentDetails(req, res) {
+    try {
+      const { paymentId } = req.params;
+
+      const payment = await Payment.findById(paymentId)
+        .populate("roomId", "name address images isPremium premiumUntil")
+        .populate("userId", "firstName lastName email avatar");
+
+      if (!payment) {
+        return res.status(404).json({ 
+          success: false,
+          message: "Không tìm thấy giao dịch" 
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: payment
+      });
+
+    } catch (error) {
+      console.error("Lỗi lấy chi tiết thanh toán:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Lỗi hệ thống" 
+      });
     }
   }
 };
