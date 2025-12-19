@@ -365,6 +365,19 @@ const reportRoom = async (req, res, next) => {
     const { reason } = req.body
 
     const result = await roomService.reportRoom(id, userId, reason)
+    
+    // Emit socket event để admin panel nhận realtime
+    const io = req.app.get('io')
+    if (io) {
+      io.emit('newReport', {
+        type: 'room',
+        roomId: id,
+        reason,
+        reportedBy: userId,
+        reportedAt: new Date()
+      })
+    }
+    
     res.status(StatusCodes.OK).json({ success: true, message: result.message })
   } catch (error) {
     next(error)
